@@ -1,0 +1,12 @@
+{
+  "mcp": {
+    "svelte": {
+      "type": "local",
+      "command": [
+        "bunx",
+        "-y",
+        "@sveltejs/mcp"
+      ]
+    }
+  }
+}
