@@ -17,6 +17,7 @@
 		"db:push": "drizzle-kit push",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
+		"db:migrate:http": "bun run src/lib/server/db/migrate.ts",
 		"db:studio": "drizzle-kit studio"
 	},
 	"devDependencies": {
@@ -44,5 +45,8 @@
 		"vitest": "^4.1.8",
 		"vitest-browser-svelte": "^2.1.1",
 		"wrangler": "^4.97.0"
+	},
+	"dependencies": {
+		"valibot": "^1.4.2"
 	}
 }

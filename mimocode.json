@@ -3,10 +3,12 @@
     "svelte": {
       "type": "local",
       "command": [
-        "bunx",
+        "bun",
+        "x",
         "-y",
         "@sveltejs/mcp"
       ]
     }
-  }
+  },
+  "$schema": "https://mimo.xiaomi.com/mimocode/config.json"
 }
