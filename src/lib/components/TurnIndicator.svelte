@@ -1,44 +1,29 @@
 <script lang="ts">
-	let {
-		currentPlayerName,
-		lastCalledNumber,
-		isMyTurn,
-		timeLeft
-	}: {
-		currentPlayerName: string;
-		lastCalledNumber: number | null;
-		isMyTurn: boolean;
-		timeLeft: number;
+	let { currentPlayerName, lastCalledNumber, isMyTurn, timeLeft }: {
+		currentPlayerName: string; lastCalledNumber: number | null; isMyTurn: boolean; timeLeft: number;
 	} = $props();
-
-	const timeColor = $derived(timeLeft <= 10 ? 'text-red-400' : 'text-zinc-400');
 </script>
 
-<div class="flex items-center gap-4 rounded-xl bg-zinc-900 px-6 py-4 shadow-lg">
+<div class="card flex items-center gap-4 sm:gap-6 px-5 sm:px-8 py-3 sm:py-4">
+	<div class="flex items-center gap-3">
+		<div class="h-3.5 w-3.5 rounded-full {isMyTurn ? 'bg-[#e8a838] shadow-[0_0_8px_rgba(232,168,56,0.5)]' : 'bg-[#bbb]'}"></div>
+		<div class="flex flex-col">
+			<span class="text-[10px] sm:text-xs text-[#7a6e60] uppercase tracking-wider">Turn</span>
+			<span class="text-sm sm:text-base {isMyTurn ? 'text-[#e8a838]' : 'text-[#3d3428]'}">{isMyTurn ? 'Your turn!' : currentPlayerName}</span>
+		</div>
+	</div>
+	{#if lastCalledNumber !== null}
+		<div class="h-8 w-px bg-[#d5cec4]"></div>
+		<div class="flex flex-col">
+			<span class="text-[10px] sm:text-xs text-[#7a6e60] uppercase tracking-wider">Called</span>
+			<span class="text-lg sm:text-xl font-bold text-[#7cb87a]">{lastCalledNumber}</span>
+		</div>
+	{/if}
+	<div class="h-8 w-px bg-[#d5cec4]"></div>
 	<div class="flex flex-col">
-		<span class="text-xs text-zinc-500 uppercase tracking-wider">Current Turn</span>
-		<span class="text-lg font-bold" class:text-blue-400={isMyTurn} class:text-white={!isMyTurn}>
-			{isMyTurn ? 'Your turn!' : currentPlayerName}
+		<span class="text-[10px] sm:text-xs text-[#7a6e60] uppercase tracking-wider">{isMyTurn ? 'Time' : 'Wait'}</span>
+		<span class="text-sm sm:text-base font-mono {timeLeft <= 10 ? 'text-[#e07850]' : timeLeft <= 20 ? 'text-[#e8a838]' : 'text-[#7cb87a]'}">
+			{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
 		</span>
 	</div>
-
-	{#if lastCalledNumber !== null}
-		<div class="h-8 w-px bg-zinc-700"></div>
-		<div class="flex flex-col">
-			<span class="text-xs text-zinc-500 uppercase tracking-wider">Last Called</span>
-			<span class="text-lg font-bold text-green-400">{lastCalledNumber}</span>
-		</div>
-	{/if}
-
-	{#if timeLeft > 0}
-		<div class="h-8 w-px bg-zinc-700"></div>
-		<div class="flex flex-col">
-			<span class="text-xs text-zinc-500 uppercase tracking-wider">
-				{isMyTurn ? 'Time Left' : 'Wait'}
-			</span>
-			<span class="text-lg font-bold {timeColor} font-mono">
-				{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
-			</span>
-		</div>
-	{/if}
 </div>

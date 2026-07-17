@@ -4,36 +4,11 @@
 
 <div class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-h-[calc(100vh-2rem)] overflow-hidden">
 	{#each $toasts as toast (toast.id)}
-		<div
-			class="pointer-events-auto rounded-lg px-4 py-3 pr-8 text-sm font-medium shadow-lg animate-slide-in relative max-w-sm
-				{toast.type === 'error' ? 'bg-red-500/90 text-white' : ''}
-				{toast.type === 'success' ? 'bg-green-500/90 text-white' : ''}
-				{toast.type === 'info' ? 'bg-zinc-700/90 text-white' : ''}"
-		>
-			{toast.message}
-			<button
-				onclick={() => dismissToast(toast.id)}
-				class="absolute top-2 right-2 text-white/60 hover:text-white text-xs leading-none"
-				aria-label="Dismiss"
-			>
-				&times;
-			</button>
+		<div class="pointer-events-auto card flex items-center gap-3 px-4 py-3 pr-8 text-sm shadow-lg animate-pop relative max-w-sm border-l-4
+			{toast.type === 'error' ? 'border-[#e07850]' : ''}{toast.type === 'success' ? 'border-[#7cb87a]' : ''}{toast.type === 'info' ? 'border-[#6a9ecf]' : ''}">
+			<span class="text-base shrink-0">{#if toast.type === 'error'}<span class="text-[#e07850]">✕</span>{:else if toast.type === 'success'}<span class="text-[#7cb87a]">✓</span>{:else}<span class="text-[#6a9ecf]">ℹ</span>{/if}</span>
+			<span class="text-[#3d3428]">{toast.message}</span>
+			<button onclick={() => dismissToast(toast.id)} class="absolute top-2 right-2 text-[#bbb] hover:text-[#3d3428] text-xs leading-none transition-colors" aria-label="Dismiss">&times;</button>
 		</div>
 	{/each}
 </div>
-
-<style>
-	@keyframes slide-in {
-		from {
-			opacity: 0;
-			transform: translateX(20px);
-		}
-		to {
-			opacity: 1;
-			transform: translateX(0);
-		}
-	}
-	.animate-slide-in {
-		animation: slide-in 0.2s ease-out;
-	}
-</style>

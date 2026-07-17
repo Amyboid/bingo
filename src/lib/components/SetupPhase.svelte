@@ -70,20 +70,20 @@
 
 <div class="flex flex-col items-center gap-6">
 	<div class="text-center">
-		<h2 class="text-xl font-bold text-white">Arrange Your Board</h2>
-		<p class="mt-1 text-zinc-400">Drag cells or double-click to edit numbers</p>
+		<h2 class="text-2xl sm:text-3xl text-white" style="text-shadow: 0 3px 0 rgba(0,0,0,0.1);">Arrange Your Board</h2>
+		<p class="mt-2 text-[#7a6e60] text-sm">Drag cells or double-click to edit numbers</p>
 	</div>
 
-	<div class="flex items-center gap-3">
-		<span class="text-sm {timerColor} font-mono">
+	<div class="card flex items-center gap-3 px-4 py-2">
+		<span class="text-lg font-mono {timeLeft <= 10 ? 'text-[#e07850]' : 'text-[#3d3428]'}">
 			{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
 		</span>
 		{#if timeLeft <= 10 && timeLeft > 0}
-			<span class="text-xs text-red-400 animate-pulse">Time running out!</span>
+			<span class="text-xs text-[#e07850] font-semibold animate-pulse">Hurry!</span>
 		{/if}
 	</div>
 
-	<div class="rounded-xl bg-zinc-900 p-4 shadow-lg">
+	<div class="card p-4 sm:p-6">
 		<Board
 			{grid}
 			editMode={!confirmed}
@@ -93,17 +93,19 @@
 	</div>
 
 	{#if confirmed}
-		<div class="flex items-center gap-2 text-green-400">
-			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-			</svg>
-			<span class="font-medium">Board confirmed! Waiting for other players...</span>
+		<div class="card flex items-center gap-3 px-5 py-3 border-2 border-[#7cb87a]/40">
+			<div class="h-6 w-6 rounded-full bg-[#7cb87a]/20 flex items-center justify-center">
+				<svg class="h-4 w-4 text-[#7cb87a]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+				</svg>
+			</div>
+			<span class="text-sm font-semibold text-[#5e9a5c]">Board locked! Waiting...</span>
 		</div>
 	{:else}
 		<button
 			onclick={handleConfirm}
 			disabled={saving}
-			class="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-500 disabled:opacity-50 transition-colors"
+			class="btn btn-green disabled:opacity-50"
 		>
 			{saving ? 'Saving...' : 'Confirm Board'}
 		</button>

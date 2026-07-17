@@ -1,93 +1,55 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-
-	let {
-		winnerName,
-		points,
-		allPlayers,
-		isHost,
-		onPlayAgain
-	}: {
-		winnerName: string;
-		points: number;
+	let { winnerName, points, allPlayers, isHost, onPlayAgain }: {
+		winnerName: string; points: number;
 		allPlayers: { displayName: string; points: number }[];
-		isHost: boolean;
-		onPlayAgain: () => void;
+		isHost: boolean; onPlayAgain: () => void;
 	} = $props();
-
-	function handleKeydown(e: KeyboardEvent) {
-		// Only host can dismiss with Escape
-		if (e.key === 'Escape' && isHost) {
-			onPlayAgain();
-		}
-	}
-
-	onMount(() => {
-		window.addEventListener('keydown', handleKeydown);
-		return () => window.removeEventListener('keydown', handleKeydown);
-	});
+	function handleKeydown(e: KeyboardEvent) { if (e.key === 'Escape' && isHost) onPlayAgain(); }
+	onMount(() => { window.addEventListener('keydown', handleKeydown); return () => window.removeEventListener('keydown', handleKeydown); });
+	const COLORS = ['#e07850', '#e8a838', '#7cb87a', '#6a9ecf', '#b07cc6'];
 </script>
 
-<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-<div
-	class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in"
-	role="dialog"
-	aria-modal="true"
-	aria-label="Game over - {winnerName} wins"
-	tabindex="-1"
->
-	<div class="flex flex-col items-center gap-6 rounded-2xl bg-zinc-900 p-10 shadow-2xl border border-amber-500/30 animate-scale-in">
-		<div class="text-6xl font-black text-amber-400 animate-bounce-once">
-			BINGO!
-		</div>
-
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+	<div class="absolute inset-0 overflow-hidden pointer-events-none">
+		{#each Array(20) as _, i (i)}
+			<div class="absolute rounded-full" style="width: {8 + (i % 3) * 6}px; height: {8 + (i % 3) * 6}px; left: {5 + (i * 4.5)}%; top: -20px; background: {COLORS[i % COLORS.length]}; animation: confetti-fall {2 + (i % 3)}s linear {i * 0.12}s forwards;"></div>
+		{/each}
+	</div>
+	<div class="card flex flex-col items-center gap-6 sm:gap-8 p-8 sm:p-12 mx-4 max-w-md w-full relative animate-pop">
+		<div class="text-6xl sm:text-7xl text-[#e07850]" style="text-shadow: 0 4px 0 rgba(0,0,0,0.12), 0 6px 12px rgba(0,0,0,0.08);">BINGO!</div>
 		<div class="text-center">
-			<p class="text-sm text-zinc-400 uppercase tracking-wider">Winner</p>
-			<p class="text-2xl font-bold text-white mt-1">{winnerName}</p>
-			<p class="text-sm text-zinc-500 mt-1">{points} points</p>
+			<p class="text-xs text-[#aaa298] uppercase tracking-widest">Winner</p>
+			<p class="text-2xl sm:text-3xl font-bold text-[#3d3428] mt-1">{winnerName}</p>
+			<div class="flex items-center justify-center gap-1 mt-2">
+				{#each Array(5) as _, i (i)}<span class="text-xl" class:text-[#e8a838]={i < points} class:text-[#d5cec4]={i >= points}>★</span>{/each}
+			</div>
 		</div>
-
-		<div class="w-full rounded-lg bg-zinc-800 p-4">
-			<h3 class="text-xs font-semibold text-zinc-500 uppercase mb-3">Final Scores</h3>
-			{#each allPlayers as player (player.displayName)}
-				<div class="flex items-center justify-between py-1.5">
-					<span class="text-sm" class:text-amber-400={player.points >= 5} class:text-white={player.points < 5}>
-						{player.displayName}
-					</span>
-					<span class="text-sm font-mono" class:text-amber-400={player.points >= 5} class:text-zinc-400={player.points < 5}>
-						{player.points}/5
-					</span>
+		<div class="w-full rounded-xl bg-[#f5f0e8] p-4">
+			<h3 class="text-[10px] font-semibold text-[#aaa298] uppercase tracking-wider mb-3">Final Scores</h3>
+			{#each allPlayers as player, i (player.displayName)}
+				<div class="flex items-center justify-between py-2 {player.points >= 5 ? '' : 'opacity-60'}">
+					<div class="flex items-center gap-2">
+						<div class="h-5 w-5 rounded-full" style="background: {COLORS[i % COLORS.length]};"></div>
+						<span class="text-sm font-semibold {player.points >= 5 ? 'text-[#c48a28]' : 'text-[#3d3428]'}">{player.displayName}</span>
+					</div>
+					<div class="flex items-center gap-0.5">
+						{#each Array(5) as _, j (j)}<span class="text-xs" class:text-[#e8a838]={j < player.points} class:text-[#d5cec4]={j >= player.points}>★</span>{/each}
+					</div>
 				</div>
 			{/each}
 		</div>
-
 		{#if isHost}
-			<button
-				onclick={onPlayAgain}
-				class="rounded-lg bg-blue-600 px-8 py-3 font-semibold text-white hover:bg-blue-500 transition-colors"
-			>
-				Play Again
-			</button>
+			<button onclick={onPlayAgain} class="btn btn-gold btn-lg w-full">Play Again</button>
 		{:else}
-			<p class="text-sm text-zinc-500">Waiting for host to start next round...</p>
+			<p class="text-sm text-[#aaa298] animate-pulse">Waiting for host...</p>
 		{/if}
 	</div>
 </div>
 
 <style>
-	@keyframes fade-in {
-		from { opacity: 0; }
-		to { opacity: 1; }
+	@keyframes confetti-fall {
+		0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+		100% { transform: translateY(calc(100vh + 40px)) rotate(720deg); opacity: 0; }
 	}
-	@keyframes scale-in {
-		from { opacity: 0; transform: scale(0.9); }
-		to { opacity: 1; transform: scale(1); }
-	}
-	@keyframes bounce-once {
-		0%, 100% { transform: translateY(0); }
-		50% { transform: translateY(-10px); }
-	}
-	.animate-fade-in { animation: fade-in 0.3s ease-out; }
-	.animate-scale-in { animation: scale-in 0.3s ease-out; }
-	.animate-bounce-once { animation: bounce-once 0.6s ease-in-out 2; }
 </style>

@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { getRoomState } from '$lib/game/room.remote';
+	import { getRoomState, leaveRoom } from '$lib/game/room.remote';
 	import { startGame, checkAutoConfirm } from '$lib/game/board.remote';
 	import Lobby from '$lib/components/Lobby.svelte';
 	import PlayerList from '$lib/components/PlayerList.svelte';
@@ -22,8 +22,22 @@
 		}
 	});
 
+	// Warn before leaving during active game
+	$effect(() => {
+		if (roomData?.room.status !== 'in_progress' && roomData?.round?.status !== 'active') return;
+
+		function handleBeforeUnload(e: BeforeUnloadEvent) {
+			e.preventDefault();
+			e.returnValue = '';
+		}
+
+		window.addEventListener('beforeunload', handleBeforeUnload);
+		return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+	});
+
 	let roomData = $state<RoomState | null>(null);
 	let loading = $state(true);
+	let showLeaveConfirm = $state(false);
 
 	const currentPlayer = $derived(roomData?.players.find((p) => p.id === playerId));
 	const isHost = $derived(roomData?.room.hostId === playerId);
@@ -107,13 +121,29 @@
 			console.error('Failed to start game:', e);
 		}
 	}
+
+	async function handleLeaveRoom() {
+		if (!roomData || !playerId) return;
+		try {
+			const result = await leaveRoom({ roomId: roomData.room.id, playerId });
+			localStorage.removeItem('playerId');
+			goto(resolve('/'));
+		} catch (e) {
+			showToast(e instanceof Error ? e.message : 'Failed to leave room');
+		}
+	}
+
+	function confirmLeave() {
+		showLeaveConfirm = false;
+		handleLeaveRoom();
+	}
 </script>
 
 <div class="flex flex-col md:flex-row min-h-screen bg-zinc-950">
-	<!-- Sidebar: horizontal on mobile, vertical on desktop -->
-	<aside class="w-full md:w-56 border-b md:border-b-0 md:border-r border-zinc-800 p-4 flex md:flex-col items-center md:items-start gap-4">
-		<div class="flex items-center gap-2">
-			<h1 class="text-lg font-bold text-white">Bingo</h1>
+	<!-- Sidebar -->
+	<aside class="w-full md:w-56 border-b md:border-b-0 md:border-r-2 border-[#d5cec4] bg-[#f5f0e8]/80 p-4 flex md:flex-col items-center md:items-start gap-4">
+		<div class="flex items-center gap-3">
+			<h1 class="text-lg text-white" style="text-shadow: 0 2px 0 rgba(0,0,0,0.1);">Bingo</h1>
 			<button
 				onclick={() => {
 					navigator.clipboard?.writeText(roomCode).then(() => {
@@ -122,7 +152,7 @@
 						showToast('Failed to copy', 'error');
 					});
 				}}
-				class="rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400 font-mono hover:bg-zinc-700 transition-colors cursor-pointer"
+				class="btn-curve bg-[#a09890] text-xs px-3 py-1"
 				title="Click to copy"
 			>
 				{roomCode}
@@ -134,14 +164,20 @@
 				currentPlayerId={playerId}
 				currentTurnPlayerId={roomData.round?.currentTurnPlayerId}
 			/>
+			<button
+				onclick={() => (showLeaveConfirm = true)}
+				class="btn-curve bg-[#e07850] text-xs px-3 py-1 mt-auto md:mt-4"
+			>
+				Leave
+			</button>
 		{/if}
 	</aside>
 
 	<main class="flex flex-1 items-center justify-center p-4 md:p-8">
 		{#if loading}
-			<div class="flex flex-col items-center gap-3">
-				<div class="h-8 w-8 border-2 border-zinc-600 border-t-white rounded-full animate-spin"></div>
-				<p class="text-zinc-400 text-sm">Loading...</p>
+			<div class="flex flex-col items-center gap-4">
+				<div class="h-10 w-10 border-4 border-[#d5cec4] border-t-[#e8a838] rounded-full animate-spin"></div>
+				<p class="text-[#7a6e60] text-sm">Loading...</p>
 			</div>
 		{:else if roomData?.room.status === 'waiting'}
 			<Lobby
@@ -173,9 +209,9 @@
 				{allCalledNumbers}
 			/>
 		{:else}
-			<div class="flex flex-col items-center gap-3">
-				<div class="h-8 w-8 border-2 border-zinc-600 border-t-white rounded-full animate-spin"></div>
-				<p class="text-zinc-400 text-sm">Connecting...</p>
+			<div class="flex flex-col items-center gap-4">
+				<div class="h-10 w-10 border-4 border-[#d5cec4] border-t-[#e8a838] rounded-full animate-spin"></div>
+				<p class="text-[#7a6e60] text-sm">Connecting...</p>
 			</div>
 		{/if}
 	</main>
@@ -189,4 +225,29 @@
 		{isHost}
 		onPlayAgain={handleStartGame}
 	/>
+{/if}
+
+{#if showLeaveConfirm}
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+		<div class="card flex flex-col items-center gap-5 p-8 mx-4 max-w-sm w-full animate-pop">
+			<h2 class="text-xl text-[#3d3428]">Leave Room?</h2>
+			<p class="text-sm text-[#7a6e60] text-center">
+				Are you sure you want to leave? You'll need a new invite to rejoin.
+			</p>
+			<div class="flex gap-3 w-full">
+				<button
+					onclick={() => (showLeaveConfirm = false)}
+					class="btn btn-gray flex-1"
+				>
+					Cancel
+				</button>
+				<button
+					onclick={confirmLeave}
+					class="btn btn-coral flex-1"
+				>
+					Leave
+				</button>
+			</div>
+		</div>
+	</div>
 {/if}

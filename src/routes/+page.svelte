@@ -37,109 +37,65 @@
 	}
 </script>
 
-<div class="flex min-h-screen items-center justify-center bg-zinc-950 p-4">
-	<div class="w-full max-w-md rounded-2xl bg-zinc-900 p-8 shadow-xl">
-		<h1 class="mb-2 text-center text-3xl font-bold text-white">Bingo</h1>
-		<p class="mb-8 text-center text-zinc-400">Multiplayer number-calling game</p>
+<div class="flex min-h-screen items-center justify-center p-4">
+	<div class="card w-full max-w-md p-8 sm:p-10 animate-pop">
+		<!-- Title -->
+		<h1 class="mb-1 text-center text-5xl sm:text-6xl text-white" style="text-shadow: 0 4px 0 rgba(0,0,0,0.12), 0 6px 12px rgba(0,0,0,0.08);">
+			Bingo
+		</h1>
+		<p class="mb-8 text-center text-[#7a6e60] text-sm">Multiplayer number-calling game</p>
 
-		<div class="mb-6 flex gap-2 rounded-lg bg-zinc-800 p-1">
+		<!-- Tab buttons -->
+		<div class="mb-6 flex gap-2">
 			<button
-				class="flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors"
-				class:bg-zinc-700={mode === 'create'}
-				class:text-white={mode === 'create'}
-				class:text-zinc-400={mode !== 'create'}
+				class="flex-1 btn-curve {mode === 'create' ? 'btn-gold' : 'btn-gray'}"
 				onclick={() => (mode = 'create')}
 			>
-				Create Room
+				Create
 			</button>
 			<button
-				class="flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors"
-				class:bg-zinc-700={mode === 'join'}
-				class:text-white={mode === 'join'}
-				class:text-zinc-400={mode !== 'join'}
+				class="flex-1 btn-curve {mode === 'join' ? 'btn-gold' : 'btn-gray'}"
 				onclick={() => (mode = 'join')}
 			>
-				Join Room
+				Join
 			</button>
 		</div>
 
 		{#if mode === 'create'}
 			<form
-				onsubmit={(e) => {
-					e.preventDefault();
-					handleCreate();
-				}}
+				onsubmit={(e) => { e.preventDefault(); handleCreate(); }}
 				class="flex flex-col gap-4"
 			>
 				<div>
-					<label for="create-name" class="mb-1 block text-sm text-zinc-400">Your Name</label>
-					<input
-						id="create-name"
-						type="text"
-						bind:value={displayName}
-						maxlength={20}
-						required
-						class="w-full rounded-lg bg-zinc-800 px-4 py-3 text-white placeholder-zinc-500 outline-none focus:ring-2 focus:ring-blue-500"
-						placeholder="Enter your name"
-					/>
+					<label for="create-name" class="mb-1.5 block text-xs font-semibold text-[#7a6e60] uppercase tracking-wider">Your Name</label>
+					<input id="create-name" type="text" bind:value={displayName} maxlength={20} required class="input" placeholder="Enter your name" />
 				</div>
 				<div>
-					<label for="create-players" class="mb-1 block text-sm text-zinc-400">Max Players</label>
-					<select
-						id="create-players"
-						bind:value={maxPlayers}
-						class="w-full rounded-lg bg-zinc-800 px-4 py-3 text-white outline-none focus:ring-2 focus:ring-blue-500"
-					>
+					<label for="create-players" class="mb-1.5 block text-xs font-semibold text-[#7a6e60] uppercase tracking-wider">Max Players</label>
+					<select id="create-players" bind:value={maxPlayers} class="input">
 						{#each [2, 3, 4, 5] as n (n)}
 							<option value={n}>{n} players</option>
 						{/each}
 					</select>
 				</div>
-				<button
-					type="submit"
-					disabled={loading || !displayName.trim()}
-					class="mt-2 rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-				>
+				<button type="submit" disabled={loading || !displayName.trim()} class="btn btn-gold btn-lg w-full disabled:opacity-50">
 					{loading ? 'Creating...' : 'Create Room'}
 				</button>
 			</form>
 		{:else}
 			<form
-				onsubmit={(e) => {
-					e.preventDefault();
-					handleJoin();
-				}}
+				onsubmit={(e) => { e.preventDefault(); handleJoin(); }}
 				class="flex flex-col gap-4"
 			>
 				<div>
-					<label for="join-code" class="mb-1 block text-sm text-zinc-400">Room Code</label>
-					<input
-						id="join-code"
-						type="text"
-						bind:value={roomCode}
-						maxlength={6}
-						required
-						class="w-full rounded-lg bg-zinc-800 px-4 py-3 text-white text-center text-xl font-mono tracking-widest placeholder-zinc-500 outline-none focus:ring-2 focus:ring-blue-500 uppercase"
-						placeholder="ABC123"
-					/>
+					<label for="join-code" class="mb-1.5 block text-xs font-semibold text-[#7a6e60] uppercase tracking-wider">Room Code</label>
+					<input id="join-code" type="text" bind:value={roomCode} maxlength={6} required class="input text-center text-xl tracking-widest uppercase" placeholder="ABC123" />
 				</div>
 				<div>
-					<label for="join-name" class="mb-1 block text-sm text-zinc-400">Your Name</label>
-					<input
-						id="join-name"
-						type="text"
-						bind:value={displayName}
-						maxlength={20}
-						required
-						class="w-full rounded-lg bg-zinc-800 px-4 py-3 text-white placeholder-zinc-500 outline-none focus:ring-2 focus:ring-blue-500"
-						placeholder="Enter your name"
-					/>
+					<label for="join-name" class="mb-1.5 block text-xs font-semibold text-[#7a6e60] uppercase tracking-wider">Your Name</label>
+					<input id="join-name" type="text" bind:value={displayName} maxlength={20} required class="input" placeholder="Enter your name" />
 				</div>
-				<button
-					type="submit"
-					disabled={loading || !displayName.trim() || roomCode.length < 6}
-					class="mt-2 rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-				>
+				<button type="submit" disabled={loading || !displayName.trim() || roomCode.length < 6} class="btn btn-gold btn-lg w-full disabled:opacity-50">
 					{loading ? 'Joining...' : 'Join Room'}
 				</button>
 			</form>

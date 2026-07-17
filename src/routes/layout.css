@@ -1,43 +1,247 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
+/* ============================================
+   BOUNCY-STYLE DESIGN SYSTEM
+   ============================================ */
+:root {
+	/* Palette */
+	--bg-base: #e8e2da;
+	--bg-card: #f5f0e8;
+	--color-text: #3d3428;
+	--color-text-light: #7a6e60;
+
+	/* Buttons */
+	--btn-primary: #e8a838;
+	--btn-primary-shadow: #c48a28;
+	--btn-secondary: #e07850;
+	--btn-secondary-shadow: #c06040;
+	--btn-gray: #a09890;
+	--btn-gray-shadow: #888078;
+	--btn-success: #7cb87a;
+	--btn-success-shadow: #5e9a5c;
+
+	/* Tiles */
+	--tile-face: #f5f0e8;
+	--tile-called: #7cb87a;
+	--tile-marked: #e07850;
+
+	/* Shadows */
+	--shadow-btn: 0 5px 0;
+	--shadow-btn-hover: 0 7px 0;
+	--shadow-btn-active: 0 2px 0;
+	--shadow-card: 0 4px 12px rgba(0,0,0,0.08);
+	--shadow-tile: 0 4px 0 rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.06);
+	--shadow-tile-hover: 0 6px 0 rgba(0,0,0,0.12), 0 3px 8px rgba(0,0,0,0.08);
+	--shadow-tile-active: 0 1px 0 rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.06);
+}
+
+/* ============================================
+   GLOBAL STYLES
+   ============================================ */
 @layer base {
 	body {
-		@apply bg-zinc-950 text-white antialiased;
-		font-family: system-ui, -apple-system, sans-serif;
+		@apply antialiased;
+		font-family: 'Fredoka One', system-ui, sans-serif;
+		background-color: var(--bg-base);
+		background-image: url('/bg.jpg');
+		background-size: cover;
+		background-attachment: fixed;
+		color: var(--color-text);
 	}
 
-	/* Scrollbar styling */
-	::-webkit-scrollbar {
-		width: 6px;
-	}
-
-	::-webkit-scrollbar-track {
-		background: transparent;
-	}
-
+	/* Scrollbar */
+	::-webkit-scrollbar { width: 6px; }
+	::-webkit-scrollbar-track { background: transparent; }
 	::-webkit-scrollbar-thumb {
-		background: #3f3f46;
+		background: #bbb;
 		border-radius: 3px;
 	}
 
-	/* Number input spinner removal */
+	/* Number input */
 	input[type='number']::-webkit-inner-spin-button,
 	input[type='number']::-webkit-outer-spin-button {
 		-webkit-appearance: none;
 		margin: 0;
 	}
+	input[type='number'] { -moz-appearance: textfield; }
 
-	input[type='number'] {
-		-moz-appearance: textfield;
-	}
-
-	/* Disable animations for motion-sensitive users */
 	@media (prefers-reduced-motion: reduce) {
 		*, *::before, *::after {
 			animation-duration: 0.01ms !important;
-			animation-iteration-count: 1 !important;
 			transition-duration: 0.01ms !important;
 		}
 	}
 }
+
+/* ============================================
+   CHUNKY BUTTONS
+   ============================================ */
+.btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	padding: 14px 28px;
+	border-radius: 50px;
+	font-family: 'Fredoka One', cursive;
+	font-size: 1rem;
+	color: white;
+	text-shadow: 0 2px 0 rgba(0,0,0,0.15);
+	border: none;
+	box-shadow: var(--shadow-btn) var(--btn-primary-shadow), 0 4px 8px rgba(0,0,0,0.1);
+	transition: all 0.1s ease;
+	cursor: pointer;
+	position: relative;
+	overflow: hidden;
+}
+.btn:active {
+	box-shadow: var(--shadow-btn-active) var(--btn-primary-shadow), 0 2px 4px rgba(0,0,0,0.08);
+	transform: translateY(3px);
+}
+.btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+	transform: none;
+	box-shadow: none;
+}
+
+.btn-gold { background: var(--btn-primary); box-shadow: var(--shadow-btn) var(--btn-primary-shadow), 0 4px 8px rgba(0,0,0,0.1); }
+.btn-gold:hover { background: #ecb442; }
+
+.btn-coral { background: var(--btn-secondary); box-shadow: var(--shadow-btn) var(--btn-secondary-shadow), 0 4px 8px rgba(0,0,0,0.1); }
+.btn-coral:hover { background: #e88060; }
+
+.btn-gray { background: var(--btn-gray); box-shadow: var(--shadow-btn) var(--btn-gray-shadow), 0 4px 8px rgba(0,0,0,0.1); }
+.btn-gray:hover { background: #aaa298; }
+
+.btn-green { background: var(--btn-success); box-shadow: var(--shadow-btn) var(--btn-success-shadow), 0 4px 8px rgba(0,0,0,0.1); }
+.btn-green:hover { background: #88c486; }
+
+.btn-lg { padding: 16px 36px; font-size: 1.15rem; }
+.btn-sm { padding: 10px 20px; font-size: 0.85rem; }
+
+/* ============================================
+   CURVY / ORGANIC BUTTONS (for sidebar, secondary)
+   ============================================ */
+.btn-curve {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	padding: 10px 22px;
+	border-radius: 18px 22px 20px 16px;
+	font-family: 'Fredoka One', cursive;
+	font-size: 0.85rem;
+	color: white;
+	text-shadow: 0 1px 0 rgba(0,0,0,0.12);
+	border: none;
+	box-shadow: 0 3px 0 rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.08);
+	transition: all 0.1s ease;
+	cursor: pointer;
+}
+.btn-curve:active {
+	box-shadow: 0 1px 0 rgba(0,0,0,0.15);
+	transform: translateY(2px);
+}
+
+/* ============================================
+   TILES
+   ============================================ */
+.tile {
+	background: var(--tile-face);
+	border-radius: 10px;
+	box-shadow: var(--shadow-tile);
+	color: var(--color-text);
+	font-family: 'Fredoka One', cursive;
+	font-weight: 400;
+	transition: all 0.1s ease;
+	user-select: none;
+}
+.tile:hover { box-shadow: var(--shadow-tile-hover); }
+.tile:active { box-shadow: var(--shadow-tile-active); transform: translateY(3px); }
+
+.tile-called {
+	background: var(--tile-called);
+	color: white;
+	text-shadow: 0 1px 0 rgba(0,0,0,0.15);
+	box-shadow: 0 4px 0 rgba(0,0,0,0.12), 0 2px 8px rgba(124,184,122,0.3);
+}
+
+.tile-marked {
+	background: var(--tile-marked);
+	color: white;
+	text-shadow: 0 1px 0 rgba(0,0,0,0.15);
+	box-shadow: 0 4px 0 rgba(0,0,0,0.12), 0 2px 8px rgba(224,120,80,0.3);
+}
+
+/* ============================================
+   CARDS
+   ============================================ */
+.card {
+	background: var(--bg-card);
+	border-radius: 16px;
+	box-shadow: var(--shadow-card);
+}
+
+/* ============================================
+   INPUTS
+   ============================================ */
+.input {
+	width: 100%;
+	padding: 12px 16px;
+	border-radius: 14px;
+	border: 2px solid #d5cec4;
+	background: white;
+	color: var(--color-text);
+	font-family: 'Fredoka One', cursive;
+	font-size: 0.95rem;
+	transition: border-color 0.2s, box-shadow 0.2s;
+	outline: none;
+	box-shadow: inset 0 2px 4px rgba(0,0,0,0.04);
+}
+.input:focus {
+	border-color: var(--btn-primary);
+	box-shadow: inset 0 2px 4px rgba(0,0,0,0.04), 0 0 0 3px rgba(232,168,56,0.2);
+}
+.input::placeholder { color: #bbb; font-weight: 400; }
+
+/* ============================================
+   WAVE SEPARATOR
+   ============================================ */
+.wave-sep {
+	width: 100%;
+	height: 20px;
+	background: transparent;
+	position: relative;
+}
+.wave-sep::after {
+	content: '';
+	position: absolute;
+	bottom: 0;
+	left: 5%;
+	right: 5%;
+	height: 3px;
+	background: rgba(0,0,0,0.06);
+	border-radius: 50%;
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes pop-in {
+	0% { transform: scale(0.85); opacity: 0; }
+	100% { transform: scale(1); opacity: 1; }
+}
+@keyframes tile-bounce {
+	0%, 100% { transform: translateY(0); }
+	40% { transform: translateY(-8px); }
+	60% { transform: translateY(-3px); }
+}
+@keyframes confetti-fall {
+	0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+	100% { transform: translateY(calc(100vh + 40px)) rotate(720deg); opacity: 0; }
+}
+
+.animate-pop { animation: pop-in 0.3s ease-out; }
+.animate-tile-bounce { animation: tile-bounce 0.4s ease-in-out; }

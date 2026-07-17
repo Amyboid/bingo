@@ -2,7 +2,7 @@
 	import Board from './Board.svelte';
 	import TurnIndicator from './TurnIndicator.svelte';
 	import { callNumber, sweepLine, callBingo, autoCallNumber } from '$lib/game/board.remote';
-	import { getLineCells } from '$lib/game/utils';
+	import { getLineCells } from '$lib/server/game/utils';
 	import { showToast } from '$lib/toast';
 
 	let {
@@ -44,11 +44,21 @@
 	const displayMarked = $derived([...marked, ...optimisticMarks]);
 	const displaySweptLines = $derived([...sweptLines, ...optimisticSweptLines]);
 
-	// Layout constants
-	const CELL = 56;
-	const GAP = 4;
-	const LABEL_W = 24;
-	const HEADER_H = 60; // 56px cell + 4px gap
+	// Layout constants (responsive to match Tailwind sm: breakpoints)
+	let windowWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 1024);
+
+	$effect(() => {
+		const onResize = () => { windowWidth = window.innerWidth; boardContainer = null; };
+		window.addEventListener('resize', onResize);
+		return () => window.removeEventListener('resize', onResize);
+	});
+
+	const isSmall = $derived(windowWidth >= 640);
+	const CELL = $derived(isSmall ? 64 : 56);
+	const GAP = $derived(isSmall ? 8 : 6);
+	const LABEL_W = $derived(isSmall ? 28 : 24);
+	const HEADER_H = $derived(isSmall ? 48 : 40);
+	const PADDING = $derived(isSmall ? 24 : 16);
 
 	// 30s turn timer with auto-call
 	$effect(() => {
@@ -127,12 +137,8 @@
 
 	// Compute cell center positions relative to the SVG container
 	function cellCenter(r: number, c: number): { x: number; y: number } {
-		// SVG is absolute inset-0 on the p-4 container
-		// Content starts at padding (16px), then header (60px), then rows
-		// Horizontal: padding + label + col * (cell + gap) + cell/2
-		const x = 16 + LABEL_W + c * (CELL + GAP) + CELL / 2;
-		// Vertical: padding + header + row * (cell + gap) + cell/2
-		const y = 16 + HEADER_H + r * (CELL + GAP) + CELL / 2;
+		const x = PADDING + LABEL_W + c * (CELL + GAP) + CELL / 2;
+		const y = PADDING + HEADER_H + r * (CELL + GAP) + CELL / 2;
 		return { x, y };
 	}
 
@@ -212,16 +218,17 @@
 	let boardContainer = $state<HTMLElement | null>(null);
 
 	// Compute cell from any pointer coordinates (mouse or touch)
+	// Uses the same responsive variables as cellCenter for exact alignment
 	function getCellFromPosition(clientX: number, clientY: number): [number, number] | null {
 		if (!boardContainer) {
 			boardContainer = document.querySelector('[data-board-container]');
 		}
 		if (!boardContainer) return null;
 		const rect = boardContainer.getBoundingClientRect();
-		const x = clientX - rect.left - 16 - 24; // padding + label
-		const y = clientY - rect.top - 16 - 60; // padding + header
-		const col = Math.floor(x / 60);
-		const row = Math.floor(y / 60);
+		const x = clientX - rect.left - PADDING - LABEL_W;
+		const y = clientY - rect.top - PADDING - HEADER_H;
+		const col = Math.floor(x / (CELL + GAP));
+		const row = Math.floor(y / (CELL + GAP));
 		if (row < 0 || row > 4 || col < 0 || col > 4) return null;
 		return [row, col];
 	}
@@ -252,17 +259,19 @@
 		timeLeft={turnTimeLeft}
 	/>
 
-	<div class="flex items-center gap-4 text-sm">
-		<span class="text-zinc-400">
-			Points: <span class="font-bold text-white">{points}/5</span>
-		</span>
+	<div class="flex items-center gap-3">
+		<div class="flex gap-1">
+			{#each Array(5) as _, i (i)}
+				<span class="text-xl transition-all duration-300" class:text-[#e8a838]={i < points} class:text-[#d5cec4]={i >= points}>★</span>
+			{/each}
+		</div>
 		{#if canCallBingo}
-			<span class="text-amber-400 font-semibold animate-pulse">Ready to BINGO!</span>
+			<span class="text-xs font-bold text-white bg-amber-400 px-2 py-0.5 rounded-full">READY!</span>
 		{/if}
 	</div>
 
 	<!-- Board with SVG overlay -->
-	<div class="relative rounded-xl bg-zinc-900 p-4 shadow-lg" data-board-container>
+	<div class="card relative p-4 sm:p-6" data-board-container>
 		<Board
 			{grid}
 			marked={displayMarked}
@@ -275,35 +284,41 @@
 
 		<!-- SVG overlays -->
 		<svg class="absolute inset-0 pointer-events-none" style="width: 100%; height: 100%;">
-			<!-- Permanent swept lines -->
+			<!-- Permanent swept lines with white outline for contrast -->
 			{#each lineOverlays as overlay}
 				{@const first = cellCenter(overlay.cells[0][0], overlay.cells[0][1])}
 				{@const last = cellCenter(overlay.cells[4][0], overlay.cells[4][1])}
+				<!-- White outline -->
 				<line
-					x1={first.x}
-					y1={first.y}
-					x2={last.x}
-					y2={last.y}
-					stroke="rgb(34, 197, 94)"
-					stroke-width="6"
-					stroke-linecap="round"
-					opacity="0.8"
+					x1={first.x} y1={first.y} x2={last.x} y2={last.y}
+					stroke="white" stroke-width="12" stroke-linecap="round" opacity="0.9"
+				/>
+				<!-- Coral line -->
+				<line
+					x1={first.x} y1={first.y} x2={last.x} y2={last.y}
+					stroke="#e07850" stroke-width="6" stroke-linecap="round" opacity="0.95"
 				/>
 			{/each}
 
-			<!-- Temporary drag path (smooth drawing) -->
+			<!-- Temporary drag path with white outline -->
 			{#if dragCells.length > 1}
+				<!-- White outline -->
 				<polyline
 					points={dragCells.map(([r, c]) => {
 						const p = cellCenter(r, c);
 						return `${p.x},${p.y}`;
 					}).join(' ')}
-					stroke="rgb(100, 200, 100)"
-					stroke-width="4"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					fill="none"
-					opacity="0.6"
+					stroke="white" stroke-width="8" stroke-linecap="round"
+					stroke-linejoin="round" fill="none" opacity="0.7"
+				/>
+				<!-- Amber drag line -->
+				<polyline
+					points={dragCells.map(([r, c]) => {
+						const p = cellCenter(r, c);
+						return `${p.x},${p.y}`;
+					}).join(' ')}
+					stroke="#e8a838" stroke-width="4" stroke-linecap="round"
+					stroke-linejoin="round" fill="none" opacity="0.9"
 				/>
 			{/if}
 		</svg>
@@ -312,7 +327,7 @@
 	{#if canCallBingo && isMyTurn}
 		<button
 			onclick={handleBingo}
-			class="rounded-xl bg-amber-500 px-8 py-4 text-xl font-bold text-black hover:bg-amber-400 animate-pulse transition-colors"
+			class="btn btn-coral btn-lg"
 		>
 			BINGO!
 		</button>
