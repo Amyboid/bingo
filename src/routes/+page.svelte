@@ -2,23 +2,22 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { createRoom, joinRoom } from '$lib/game/room.remote';
+	import { showToast } from '$lib/toast';
 
 	let mode: 'create' | 'join' = $state('create');
 	let displayName = $state('');
 	let maxPlayers = $state(5);
 	let roomCode = $state('');
 	let loading = $state(false);
-	let errorMsg = $state('');
 
 	async function handleCreate() {
 		loading = true;
-		errorMsg = '';
 		try {
 			const result = await createRoom({ displayName, maxPlayers });
 			localStorage.setItem('playerId', result.playerId);
 			goto(resolve('/room/[code]', { code: result.code }));
 		} catch (e: unknown) {
-			errorMsg = e instanceof Error ? e.message : 'Failed to create room';
+			showToast(e instanceof Error ? e.message : 'Failed to create room');
 		} finally {
 			loading = false;
 		}
@@ -26,13 +25,12 @@
 
 	async function handleJoin() {
 		loading = true;
-		errorMsg = '';
 		try {
 			const result = await joinRoom({ roomCode: roomCode.toUpperCase(), displayName });
 			localStorage.setItem('playerId', result.playerId);
 			goto(resolve('/room/[code]', { code: result.code }));
 		} catch (e: unknown) {
-			errorMsg = e instanceof Error ? e.message : 'Failed to join room';
+			showToast(e instanceof Error ? e.message : 'Failed to join room');
 		} finally {
 			loading = false;
 		}
@@ -64,12 +62,6 @@
 				Join Room
 			</button>
 		</div>
-
-		{#if errorMsg}
-			<div class="mb-4 rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-400">
-				{errorMsg}
-			</div>
-		{/if}
 
 		{#if mode === 'create'}
 			<form

@@ -10,7 +10,9 @@
 		disabled = false,
 		editMode = false,
 		onGridChange,
-		onCellClick
+		onCellClick,
+		onDragStart: onSweepDragStart,
+		onDragMove: onSweepDragMove
 	}: {
 		grid: number[][];
 		marked?: [number, number][];
@@ -19,6 +21,8 @@
 		editMode?: boolean;
 		onGridChange?: (newGrid: number[][]) => void;
 		onCellClick?: (row: number, col: number) => void;
+		onDragStart?: (row: number, col: number) => void;
+		onDragMove?: (row: number, col: number) => void;
 	} = $props();
 
 	let dragSource: [number, number] | null = $state(null);
@@ -49,7 +53,7 @@
 		onGridChange(newGrid);
 	}
 
-	function handleDragStart(r: number, c: number) {
+	function handleEditDragStart(r: number, c: number) {
 		dragSource = [r, c];
 	}
 
@@ -67,6 +71,14 @@
 		newGrid[r][c] = temp;
 		onGridChange(newGrid);
 		dragSource = null;
+	}
+
+	function handleSweepDragStart(r: number, c: number) {
+		onSweepDragStart?.(r, c);
+	}
+
+	function handleSweepDragMove(r: number, c: number) {
+		onSweepDragMove?.(r, c);
 	}
 </script>
 
@@ -87,17 +99,19 @@
 			{#each gridRow as cell, c (c)}
 				<Cell
 					value={cell}
-					row={r}
-					col={c}
+					{r}
+					{c}
 					{disabled}
 					marked={isMarked(r, c)}
 					isCalled={calledSet.has(cell)}
-					canInteract={editMode || (!disabled && !isMarked(r, c))}
+					canInteract={editMode || (!disabled && isMarked(r, c))}
 					draggable={editMode}
 					onValueChange={(val: number) => handleValueChange(r, c, val)}
-					onClick={onCellClick}
-					onDragStart={editMode ? handleDragStart : undefined}
+					onClick={!editMode ? onCellClick : undefined}
+					onDragStart={editMode ? handleEditDragStart : undefined}
 					onDrop={editMode ? handleDrop : undefined}
+					onSweepDragStart={!editMode ? handleSweepDragStart : undefined}
+					onSweepDragMove={!editMode ? handleSweepDragMove : undefined}
 				/>
 			{/each}
 		</div>

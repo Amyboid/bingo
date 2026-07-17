@@ -13,8 +13,14 @@
 		onStartGame: () => void;
 	} = $props();
 
+	let starting = $state(false);
 	let slotsLeft = $derived(maxPlayers - playerList.length);
 	let allJoined = $derived(playerList.length >= maxPlayers);
+
+	function handleClick() {
+		starting = true;
+		onStartGame();
+	}
 </script>
 
 <div class="flex flex-col items-center gap-6">
@@ -38,15 +44,24 @@
 				{/if}
 			</div>
 		{/each}
+		{#each Array(slotsLeft) as _, i (i)}
+			<div class="flex items-center gap-3 rounded-lg border border-dashed border-zinc-700 px-4 py-3">
+				<span class="text-zinc-600 text-sm">{playerList.length + i + 1}</span>
+				<span class="text-zinc-600 text-sm italic">Waiting for player...</span>
+			</div>
+		{/each}
 	</div>
 
-	{#if allJoined}
+	{#if allJoined && isHost}
 		<button
-			onclick={onStartGame}
-			class="rounded-lg bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-500 transition-colors"
+			onclick={handleClick}
+			disabled={starting}
+			class="rounded-lg bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
 		>
-			Start Game
+			{starting ? 'Starting...' : 'Start Game'}
 		</button>
+	{:else if allJoined && !isHost}
+		<p class="text-sm text-zinc-400">Waiting for host to start the game...</p>
 	{:else if isHost}
 		<p class="text-sm text-zinc-500">Waiting for all players to join...</p>
 	{/if}

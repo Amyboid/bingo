@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+
 	let {
 		winnerName,
 		points,
@@ -12,26 +14,42 @@
 		isHost: boolean;
 		onPlayAgain: () => void;
 	} = $props();
+
+	function handleKeydown(e: KeyboardEvent) {
+		// Only host can dismiss with Escape
+		if (e.key === 'Escape' && isHost) {
+			onPlayAgain();
+		}
+	}
+
+	onMount(() => {
+		window.addEventListener('keydown', handleKeydown);
+		return () => window.removeEventListener('keydown', handleKeydown);
+	});
 </script>
 
-<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-	<div class="flex flex-col items-center gap-6 rounded-2xl bg-zinc-900 p-10 shadow-2xl border border-amber-500/30">
-		<!-- Celebration -->
-		<div class="text-6xl font-black text-amber-400 animate-bounce">
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+<div
+	class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in"
+	role="dialog"
+	aria-modal="true"
+	aria-label="Game over - {winnerName} wins"
+	tabindex="-1"
+>
+	<div class="flex flex-col items-center gap-6 rounded-2xl bg-zinc-900 p-10 shadow-2xl border border-amber-500/30 animate-scale-in">
+		<div class="text-6xl font-black text-amber-400 animate-bounce-once">
 			BINGO!
 		</div>
 
-		<!-- Winner -->
 		<div class="text-center">
 			<p class="text-sm text-zinc-400 uppercase tracking-wider">Winner</p>
 			<p class="text-2xl font-bold text-white mt-1">{winnerName}</p>
 			<p class="text-sm text-zinc-500 mt-1">{points} points</p>
 		</div>
 
-		<!-- Scores -->
 		<div class="w-full rounded-lg bg-zinc-800 p-4">
 			<h3 class="text-xs font-semibold text-zinc-500 uppercase mb-3">Final Scores</h3>
-			{#each allPlayers as player}
+			{#each allPlayers as player (player.displayName)}
 				<div class="flex items-center justify-between py-1.5">
 					<span class="text-sm" class:text-amber-400={player.points >= 5} class:text-white={player.points < 5}>
 						{player.displayName}
@@ -43,7 +61,6 @@
 			{/each}
 		</div>
 
-		<!-- Play again -->
 		{#if isHost}
 			<button
 				onclick={onPlayAgain}
@@ -56,3 +73,21 @@
 		{/if}
 	</div>
 </div>
+
+<style>
+	@keyframes fade-in {
+		from { opacity: 0; }
+		to { opacity: 1; }
+	}
+	@keyframes scale-in {
+		from { opacity: 0; transform: scale(0.9); }
+		to { opacity: 1; transform: scale(1); }
+	}
+	@keyframes bounce-once {
+		0%, 100% { transform: translateY(0); }
+		50% { transform: translateY(-10px); }
+	}
+	.animate-fade-in { animation: fade-in 0.3s ease-out; }
+	.animate-scale-in { animation: scale-in 0.3s ease-out; }
+	.animate-bounce-once { animation: bounce-once 0.6s ease-in-out 2; }
+</style>

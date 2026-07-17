@@ -18,7 +18,7 @@
 		{@const isCurrentTurn = player.id === currentTurnPlayerId}
 		{@const isMe = player.id === currentPlayerId}
 		<div
-			class="flex items-center gap-2 rounded-lg px-3 py-2 transition-colors {isCurrentTurn ? 'bg-blue-500/20 border border-blue-400' : 'bg-zinc-800'}"
+			class="flex items-center gap-2 rounded-lg px-3 py-2 transition-colors duration-200 {isCurrentTurn ? 'bg-blue-500/20 border border-blue-400' : 'bg-zinc-800'}"
 		>
 			{#if isCurrentTurn}
 				<span class="inline-block h-2 w-2 rounded-full bg-blue-400 animate-pulse"></span>

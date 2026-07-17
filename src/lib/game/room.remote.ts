@@ -4,7 +4,7 @@ import * as v from 'valibot';
 import { db } from '$lib/server/db';
 import { rooms, players, rounds, playerBoards } from '$lib/server/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
-import { generateRoomCode, createDefaultGrid } from '$lib/server/game/utils';
+import { generateRoomCode } from '$lib/server/game/utils';
 
 export const getRoomState = query(v.string(), async (roomCode) => {
 	const [room] = await db.select().from(rooms).where(eq(rooms.code, roomCode));
@@ -16,76 +16,12 @@ export const getRoomState = query(v.string(), async (roomCode) => {
 		.where(eq(players.roomId, room.id))
 		.orderBy(players.joinOrder);
 
-	// Get the latest round (any status)
 	const [latestRound] = await db
 		.select()
 		.from(rounds)
 		.where(eq(rounds.roomId, room.id))
 		.orderBy(desc(rounds.createdAt))
 		.limit(1);
-
-	// Auto-confirm expired setup rounds
-	if (latestRound && latestRound.status === 'setup' && latestRound.setupDeadline) {
-		if (new Date() > latestRound.setupDeadline) {
-			// Auto-confirm all unconfirmed boards
-			const unconfirmedBoards = await db
-				.select()
-				.from(playerBoards)
-				.where(and(eq(playerBoards.roundId, latestRound.id), eq(playerBoards.confirmed, false)));
-
-			for (const board of unconfirmedBoards) {
-				await db
-					.update(playerBoards)
-					.set({ confirmed: true, confirmedAt: new Date() })
-					.where(eq(playerBoards.id, board.id));
-			}
-
-			// Start the round if all are now confirmed
-			const allBoards = await db
-				.select()
-				.from(playerBoards)
-				.where(eq(playerBoards.roundId, latestRound.id));
-
-			const allConfirmed = allBoards.every((b) => b.confirmed);
-			if (allConfirmed) {
-				const roomPlayersForTurn = await db
-					.select()
-					.from(players)
-					.where(eq(players.roomId, room.id))
-					.orderBy(players.joinOrder);
-
-				await db
-					.update(rounds)
-					.set({
-						status: 'active',
-						currentTurnPlayerId: roomPlayersForTurn[0]?.id,
-						turnStartedAt: new Date()
-					})
-					.where(eq(rounds.id, latestRound.id));
-
-				// Refetch the updated round
-				const [updatedRound] = await db
-					.select()
-					.from(rounds)
-					.where(eq(rounds.id, latestRound.id))
-					.limit(1);
-
-				if (updatedRound) {
-					const boards = await db
-						.select()
-						.from(playerBoards)
-						.where(eq(playerBoards.roundId, updatedRound.id));
-
-					return {
-						room,
-						players: roomPlayers,
-						round: updatedRound,
-						boards
-					};
-				}
-			}
-		}
-	}
 
 	const allBoards = latestRound
 		? await db
@@ -133,8 +69,8 @@ export const joinRoom = command(
 	}),
 	async ({ roomCode, displayName }) => {
 		const [room] = await db.select().from(rooms).where(eq(rooms.code, roomCode));
-		if (!room) error(404, 'Room not found');
-		if (room.status !== 'waiting') error(400, 'Game already in progress');
+		if (!room) throw new Error('Room not found');
+		if (room.status !== 'waiting') throw new Error('Game already in progress');
 
 		const existingPlayers = await db
 			.select()
@@ -142,13 +78,13 @@ export const joinRoom = command(
 			.where(eq(players.roomId, room.id));
 
 		if (existingPlayers.length >= room.maxPlayers) {
-			error(400, 'Room is full');
+			throw new Error('Room is full');
 		}
 
 		const nameTaken = existingPlayers.some(
 			(p) => p.displayName.toLowerCase() === displayName.toLowerCase()
 		);
-		if (nameTaken) error(400, 'Name already taken');
+		if (nameTaken) throw new Error('Name already taken');
 
 		const [player] = await db
 			.insert(players)

@@ -10,6 +10,8 @@
 		isMyTurn: boolean;
 		timeLeft: number;
 	} = $props();
+
+	const timeColor = $derived(timeLeft <= 10 ? 'text-red-400' : 'text-zinc-400');
 </script>
 
 <div class="flex items-center gap-4 rounded-xl bg-zinc-900 px-6 py-4 shadow-lg">
@@ -31,8 +33,12 @@
 	{#if timeLeft > 0}
 		<div class="h-8 w-px bg-zinc-700"></div>
 		<div class="flex flex-col">
-			<span class="text-xs text-zinc-500 uppercase tracking-wider">Wait</span>
-			<span class="text-lg font-bold text-zinc-400 font-mono">{timeLeft}s</span>
+			<span class="text-xs text-zinc-500 uppercase tracking-wider">
+				{isMyTurn ? 'Time Left' : 'Wait'}
+			</span>
+			<span class="text-lg font-bold {timeColor} font-mono">
+				{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}
+			</span>
 		</div>
 	{/if}
 </div>

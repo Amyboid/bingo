@@ -1,18 +1,27 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import { getRoomState } from '$lib/game/room.remote';
-	import { startGame } from '$lib/game/board.remote';
+	import { startGame, checkAutoConfirm } from '$lib/game/board.remote';
 	import Lobby from '$lib/components/Lobby.svelte';
 	import PlayerList from '$lib/components/PlayerList.svelte';
 	import SetupPhase from '$lib/components/SetupPhase.svelte';
 	import PlayPhase from '$lib/components/PlayPhase.svelte';
 	import WinOverlay from '$lib/components/WinOverlay.svelte';
+	import { showToast } from '$lib/toast';
 	import type { RoomState } from '$lib/game/types';
 
 	const roomCode = $derived(page.params.code ?? '');
 	const playerId: string | null = $state(typeof localStorage !== 'undefined' ? localStorage.getItem('playerId') : null);
 
-	let tick = $state(0);
+	// Redirect home if no playerId
+	$effect(() => {
+		if (!playerId) {
+			goto(resolve('/'));
+		}
+	});
+
 	let roomData = $state<RoomState | null>(null);
 	let loading = $state(true);
 
@@ -22,18 +31,17 @@
 
 	const allCalledNumbers = $derived.by(() => {
 		if (!roomData?.round) return [];
-		const nums: number[] = [];
-		if (roomData.round.lastCalledNumber !== null) {
-			for (const board of roomData.boards) {
-				const grid = board.grid as number[][];
-				const marked = (board.marked as [number, number][]) ?? [];
-				for (const [r, c] of marked) {
-					const num = grid[r]?.[c];
-					if (num && !nums.includes(num)) nums.push(num);
-				}
+		if (roomData.round.lastCalledNumber === null) return [];
+		const numSet = new Set<number>();
+		for (const board of roomData.boards) {
+			const grid = board.grid as number[][];
+			const marked = (board.marked as [number, number][]) ?? [];
+			for (const [r, c] of marked) {
+				const num = grid[r]?.[c];
+				if (num) numSet.add(num);
 			}
 		}
-		return nums;
+		return [...numSet];
 	});
 
 	const winner = $derived.by(() => {
@@ -46,41 +54,48 @@
 			: null;
 	});
 
-	const playerScores = $derived(
-		(roomData?.players ?? []).map((p) => ({
+	const playerScores = $derived.by(() => {
+		const boardMap = new Map(roomData?.boards.map((b) => [b.playerId, b.points]) ?? []);
+		return (roomData?.players ?? []).map((p) => ({
 			displayName: p.displayName,
-			points: roomData?.boards.find((b) => b.playerId === p.id)?.points ?? 0
-		}))
-	);
+			points: boardMap.get(p.id) ?? 0
+		}));
+	});
 
 	async function fetchState() {
 		try {
-			roomData = await getRoomState(roomCode);
+			const q = getRoomState(roomCode);
+			await q.refresh();
+			roomData = q.current ?? null;
 			loading = false;
+
+			// Auto-confirm if setup deadline passed
+			if (roomData?.round?.status === 'setup' && roomData.round.setupDeadline) {
+				const deadline = new Date(roomData.round.setupDeadline).getTime();
+				if (Date.now() >= deadline) {
+					await checkAutoConfirm({ roomId: roomData.room.id });
+					// Re-fetch after auto-confirm
+					const q2 = getRoomState(roomCode);
+					await q2.refresh();
+					roomData = q2.current ?? null;
+				}
+			}
 		} catch (e) {
 			console.error('Failed to fetch room state:', e);
 		}
 	}
 
-	// Initial fetch
+	// Single polling effect with cleanup
 	$effect(() => {
+		const code = roomCode;
 		loading = true;
 		fetchState();
-	});
 
-	// Polling loop
-	$effect(() => {
 		const interval = setInterval(() => {
-			tick++;
-		}, roomData?.round?.status === 'active' ? 1000 : 1500);
-		return () => clearInterval(interval);
-	});
-
-	// Re-fetch on tick
-	$effect(() => {
-		if (tick > 0) {
 			fetchState();
-		}
+		}, 500);
+
+		return () => clearInterval(interval);
 	});
 
 	async function handleStartGame() {
@@ -94,12 +109,19 @@
 	}
 </script>
 
-<div class="flex min-h-screen bg-zinc-950">
-	<aside class="w-56 border-r border-zinc-800 p-4">
-		<div class="mb-4 flex items-center gap-2">
+<div class="flex flex-col md:flex-row min-h-screen bg-zinc-950">
+	<!-- Sidebar: horizontal on mobile, vertical on desktop -->
+	<aside class="w-full md:w-56 border-b md:border-b-0 md:border-r border-zinc-800 p-4 flex md:flex-col items-center md:items-start gap-4">
+		<div class="flex items-center gap-2">
 			<h1 class="text-lg font-bold text-white">Bingo</h1>
 			<button
-				onclick={() => navigator.clipboard?.writeText(roomCode)}
+				onclick={() => {
+					navigator.clipboard?.writeText(roomCode).then(() => {
+						showToast('Room code copied!', 'success');
+					}).catch(() => {
+						showToast('Failed to copy', 'error');
+					});
+				}}
 				class="rounded bg-zinc-800 px-2 py-0.5 text-xs text-zinc-400 font-mono hover:bg-zinc-700 transition-colors cursor-pointer"
 				title="Click to copy"
 			>
@@ -115,10 +137,11 @@
 		{/if}
 	</aside>
 
-	<main class="flex flex-1 items-center justify-center p-8">
+	<main class="flex flex-1 items-center justify-center p-4 md:p-8">
 		{#if loading}
-			<div class="text-center">
-				<h2 class="text-xl font-bold text-white">Loading...</h2>
+			<div class="flex flex-col items-center gap-3">
+				<div class="h-8 w-8 border-2 border-zinc-600 border-t-white rounded-full animate-spin"></div>
+				<p class="text-zinc-400 text-sm">Loading...</p>
 			</div>
 		{:else if roomData?.room.status === 'waiting'}
 			<Lobby
@@ -150,8 +173,9 @@
 				{allCalledNumbers}
 			/>
 		{:else}
-			<div class="text-center">
-				<h2 class="text-xl font-bold text-white">Loading...</h2>
+			<div class="flex flex-col items-center gap-3">
+				<div class="h-8 w-8 border-2 border-zinc-600 border-t-white rounded-full animate-spin"></div>
+				<p class="text-zinc-400 text-sm">Connecting...</p>
 			</div>
 		{/if}
 	</main>

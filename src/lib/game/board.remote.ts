@@ -1,5 +1,4 @@
 import { command } from '$app/server';
-import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { db } from '$lib/server/db';
 import { rooms, players, rounds, playerBoards } from '$lib/server/db/schema';
@@ -19,10 +18,10 @@ export const updateGrid = command(
 			.from(rounds)
 			.where(and(eq(rounds.roomId, roomId), eq(rounds.status, 'setup')))
 			.limit(1);
-		if (!round) error(400, 'No active setup round');
+		if (!round) throw new Error('No active setup round');
 
 		if (round.setupDeadline && new Date() > round.setupDeadline) {
-			error(400, 'Setup time expired');
+			throw new Error('Setup time expired');
 		}
 
 		const [board] = await db
@@ -30,8 +29,8 @@ export const updateGrid = command(
 			.from(playerBoards)
 			.where(and(eq(playerBoards.roundId, round.id), eq(playerBoards.playerId, playerId)))
 			.limit(1);
-		if (!board) error(404, 'Board not found');
-		if (board.confirmed) error(400, 'Board already confirmed');
+		if (!board) throw new Error('Board not found');
+		if (board.confirmed) throw new Error('Board already confirmed');
 
 		await db
 			.update(playerBoards)
@@ -51,15 +50,15 @@ export const confirmBoard = command(
 			.from(rounds)
 			.where(and(eq(rounds.roomId, roomId), eq(rounds.status, 'setup')))
 			.limit(1);
-		if (!round) error(400, 'No active setup round');
+		if (!round) throw new Error('No active setup round');
 
 		const [board] = await db
 			.select()
 			.from(playerBoards)
 			.where(and(eq(playerBoards.roundId, round.id), eq(playerBoards.playerId, playerId)))
 			.limit(1);
-		if (!board) error(404, 'Board not found');
-		if (board.confirmed) error(400, 'Already confirmed');
+		if (!board) throw new Error('Board not found');
+		if (board.confirmed) throw new Error('Already confirmed');
 
 		await db
 			.update(playerBoards)
@@ -91,9 +90,11 @@ export const startGame = command(
 	}),
 	async ({ roomId, playerId }) => {
 		const [room] = await db.select().from(rooms).where(eq(rooms.id, roomId));
-		if (!room) error(404, 'Room not found');
-		if (room.hostId !== playerId) error(403, 'Only host can start');
-		if (room.status !== 'waiting') error(400, 'Game already started');
+		if (!room) throw new Error('Room not found');
+		if (room.hostId !== playerId) throw new Error('Only host can start');
+		if (room.status !== 'waiting' && room.status !== 'round_ended') {
+			throw new Error('Game already started');
+		}
 
 		const roomPlayers = await db
 			.select()
@@ -101,7 +102,7 @@ export const startGame = command(
 			.where(eq(players.roomId, roomId))
 			.orderBy(players.joinOrder);
 
-		if (roomPlayers.length < 2) error(400, 'Need at least 2 players');
+		if (roomPlayers.length < 2) throw new Error('Need at least 2 players');
 
 		const existingRounds = await db
 			.select({ value: count() })
@@ -165,16 +166,16 @@ export const callNumber = command(
 			.from(rounds)
 			.where(and(eq(rounds.roomId, roomId), eq(rounds.status, 'active')))
 			.limit(1);
-		if (!round) error(400, 'No active round');
+		if (!round) throw new Error('No active round');
 
 		// Check turn
 		if (round.currentTurnPlayerId !== playerId) {
-			error(400, 'Not your turn');
+			throw new Error('Not your turn');
 		}
 
 		// Check if already called
 		if (round.lastCalledNumber === number) {
-			error(400, 'Number already called this turn');
+			throw new Error('Number already called this turn');
 		}
 
 		// Check number on caller's board
@@ -184,10 +185,10 @@ export const callNumber = command(
 			.where(and(eq(playerBoards.roundId, round.id), eq(playerBoards.playerId, playerId)))
 			.limit(1);
 
-		if (!myBoard) error(404, 'Board not found');
+		if (!myBoard) throw new Error('Board not found');
 		const grid = myBoard.grid as number[][];
 		const onBoard = grid.some((row) => row.includes(number));
-		if (!onBoard) error(400, 'Number not on your board');
+		if (!onBoard) throw new Error('Number not on your board');
 
 		// Mark on all boards
 		await markNumberOnAllBoards(round.id, number);
@@ -203,13 +204,13 @@ export const callNumber = command(
 		const nextIndex = (currentIndex + 1) % roomPlayers.length;
 		const nextPlayer = roomPlayers[nextIndex];
 
-		// Update round: set turn to next player with 2s pause
+		// Update round: advance turn immediately
 		await db
 			.update(rounds)
 			.set({
 				lastCalledNumber: number,
 				currentTurnPlayerId: nextPlayer.id,
-				turnStartedAt: new Date(Date.now() + 2000)
+				turnStartedAt: new Date()
 			})
 			.where(eq(rounds.id, round.id));
 	}
@@ -227,18 +228,14 @@ export const sweepLine = command(
 			.from(rounds)
 			.where(and(eq(rounds.roomId, roomId), eq(rounds.status, 'active')))
 			.limit(1);
-		if (!round) error(400, 'No active round');
-
-		if (round.currentTurnPlayerId !== playerId) {
-			error(400, 'Can only sweep on your turn');
-		}
+		if (!round) throw new Error('No active round');
 
 		const [board] = await db
 			.select()
 			.from(playerBoards)
 			.where(and(eq(playerBoards.roundId, round.id), eq(playerBoards.playerId, playerId)))
 			.limit(1);
-		if (!board) error(404, 'Board not found');
+		if (!board) throw new Error('Board not found');
 
 		const marked = (board.marked as [number, number][]) ?? [];
 		const sweptLines = (board.sweptLines as string[]) ?? [];
@@ -257,7 +254,7 @@ export const sweepLine = command(
 		}
 
 		if (pointsAwarded === 0) {
-			error(400, 'No valid lines to sweep');
+			throw new Error('No valid lines to sweep');
 		}
 
 		await db
@@ -281,10 +278,10 @@ export const callBingo = command(
 			.from(rounds)
 			.where(and(eq(rounds.roomId, roomId), eq(rounds.status, 'active')))
 			.limit(1);
-		if (!round) error(400, 'No active round');
+		if (!round) throw new Error('No active round');
 
 		if (round.currentTurnPlayerId !== playerId) {
-			error(400, 'Can only call Bingo on your turn');
+			throw new Error('Can only call Bingo on your turn');
 		}
 
 		const [board] = await db
@@ -292,10 +289,10 @@ export const callBingo = command(
 			.from(playerBoards)
 			.where(and(eq(playerBoards.roundId, round.id), eq(playerBoards.playerId, playerId)))
 			.limit(1);
-		if (!board) error(404, 'Board not found');
+		if (!board) throw new Error('Board not found');
 
 		if (board.points < 5) {
-			error(400, `Need 5 points to call Bingo (you have ${board.points})`);
+			throw new Error(`Need 5 points to call Bingo (you have ${board.points})`);
 		}
 
 		// Winner! End the round
@@ -310,5 +307,113 @@ export const callBingo = command(
 			.where(eq(rooms.id, roomId));
 
 		return { winner: playerId, points: board.points };
+	}
+);
+
+export const checkAutoConfirm = command(
+	v.object({ roomId: v.string() }),
+	async ({ roomId }) => {
+		const [round] = await db
+			.select()
+			.from(rounds)
+			.where(and(eq(rounds.roomId, roomId), eq(rounds.status, 'setup')))
+			.limit(1);
+
+		if (!round || !round.setupDeadline) return { started: false };
+		if (new Date() <= round.setupDeadline) return { started: false };
+
+		const unconfirmed = await db
+			.select()
+			.from(playerBoards)
+			.where(and(eq(playerBoards.roundId, round.id), eq(playerBoards.confirmed, false)));
+
+		for (const board of unconfirmed) {
+			await db
+				.update(playerBoards)
+				.set({ confirmed: true, confirmedAt: new Date() })
+				.where(eq(playerBoards.id, board.id));
+		}
+
+		const allBoards = await db
+			.select()
+			.from(playerBoards)
+			.where(eq(playerBoards.roundId, round.id));
+
+		if (allBoards.every((b) => b.confirmed)) {
+			const roomPlayers = await db
+				.select()
+				.from(players)
+				.where(eq(players.roomId, roomId))
+				.orderBy(players.joinOrder);
+
+			await db
+				.update(rounds)
+				.set({
+					status: 'active',
+					currentTurnPlayerId: roomPlayers[0]?.id,
+					turnStartedAt: new Date()
+				})
+				.where(eq(rounds.id, round.id));
+
+			return { started: true };
+		}
+
+		return { started: false };
+	}
+);
+
+export const autoCallNumber = command(
+	v.object({ roomId: v.string(), playerId: v.string() }),
+	async ({ roomId, playerId }) => {
+		const [round] = await db
+			.select()
+			.from(rounds)
+			.where(and(eq(rounds.roomId, roomId), eq(rounds.status, 'active')))
+			.limit(1);
+		if (!round) throw new Error('No active round');
+		if (round.currentTurnPlayerId !== playerId) throw new Error('Not your turn');
+
+		const [board] = await db
+			.select()
+			.from(playerBoards)
+			.where(and(eq(playerBoards.roundId, round.id), eq(playerBoards.playerId, playerId)))
+			.limit(1);
+		if (!board) throw new Error('Board not found');
+
+		const grid = board.grid as number[][];
+		const boardMarked = (board.marked as [number, number][]) ?? [];
+		const markedNums = new Set(boardMarked.map(([r, c]) => grid[r]?.[c]));
+
+		const uncalled: number[] = [];
+		for (const row of grid) {
+			for (const num of row) {
+				if (!markedNums.has(num)) uncalled.push(num);
+			}
+		}
+
+		if (uncalled.length === 0) return { autoCalled: false };
+
+		const randomNum = uncalled[Math.floor(Math.random() * uncalled.length)];
+
+		await markNumberOnAllBoards(round.id, randomNum);
+
+		const roomPlayers = await db
+			.select()
+			.from(players)
+			.where(eq(players.roomId, roomId))
+			.orderBy(players.joinOrder);
+		const currentIndex = roomPlayers.findIndex((p) => p.id === playerId);
+		const nextPlayer = roomPlayers[(currentIndex + 1) % roomPlayers.length];
+
+		await db
+			.update(rounds)
+			.set({
+				lastCalledNumber: randomNum,
+				currentTurnPlayerId: nextPlayer.id,
+				turnStartedAt: new Date()
+			})
+			.where(eq(rounds.id, round.id));
+
+		return { autoCalled: true, number: randomNum };
 	}
 );
