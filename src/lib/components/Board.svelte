@@ -9,7 +9,7 @@
 		onGridChange, onCellClick,
 		onDragStart: onSweepDragStart, onDragMove: onSweepDragMove
 	}: {
-		grid: number[][]; marked?: [number, number][]; calledNumbers?: string[];
+		grid: number[][]; marked?: [number, number][]; calledNumbers?: number[];
 		disabled?: boolean; editMode?: boolean;
 		onGridChange?: (newGrid: number[][]) => void;
 		onCellClick?: (row: number, col: number) => void;

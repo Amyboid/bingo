@@ -2,7 +2,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { getRoomState, leaveRoom } from '$lib/game/room.remote';
+	import { getRoomState, leaveRoom, rejoinRoom } from '$lib/game/room.remote';
 	import { startGame, checkAutoConfirm } from '$lib/game/board.remote';
 	import Lobby from '$lib/components/Lobby.svelte';
 	import PlayerList from '$lib/components/PlayerList.svelte';
@@ -13,12 +13,21 @@
 	import type { RoomState } from '$lib/game/types';
 
 	const roomCode = $derived(page.params.code ?? '');
-	const playerId: string | null = $state(typeof localStorage !== 'undefined' ? localStorage.getItem('playerId') : null);
+	const playerId: string | null = $state(
+		typeof localStorage !== 'undefined'
+			? localStorage.getItem(`bingo:player:${page.params.code}`)
+			: null
+	);
 
-	// Redirect home if no playerId
+	// Redirect home if no playerId and room is not in a rejoinable state
 	$effect(() => {
-		if (!playerId) {
-			goto(resolve('/'));
+		if (!playerId && !loading && roomData) {
+			// Allow rejoin if room is in waiting status
+			if (roomData.room.status === 'waiting') {
+				showRejoinForm = true;
+			} else {
+				goto(resolve('/'));
+			}
 		}
 	});
 
@@ -38,6 +47,9 @@
 	let roomData = $state<RoomState | null>(null);
 	let loading = $state(true);
 	let showLeaveConfirm = $state(false);
+	let showRejoinForm = $state(false);
+	let rejoinName = $state('');
+	let rejoinLoading = $state(false);
 
 	const currentPlayer = $derived(roomData?.players.find((p) => p.id === playerId));
 	const isHost = $derived(roomData?.room.hostId === playerId);
@@ -80,18 +92,22 @@
 		try {
 			const q = getRoomState(roomCode);
 			await q.refresh();
-			roomData = q.current ?? null;
-			loading = false;
+			const data = q.current;
+			if (data) {
+				roomData = data;
+				loading = false;
 
-			// Auto-confirm if setup deadline passed
-			if (roomData?.round?.status === 'setup' && roomData.round.setupDeadline) {
-				const deadline = new Date(roomData.round.setupDeadline).getTime();
-				if (Date.now() >= deadline) {
-					await checkAutoConfirm({ roomId: roomData.room.id });
-					// Re-fetch after auto-confirm
-					const q2 = getRoomState(roomCode);
-					await q2.refresh();
-					roomData = q2.current ?? null;
+				// Check if player exists in the room
+				if (playerId && !roomData.players.find((p) => p.id === playerId) && roomData.room.status !== 'round_ended') {
+					showRejoinForm = true;
+				}
+
+				// Auto-confirm if setup deadline passed
+				if (roomData?.round?.status === 'setup' && roomData.round.setupDeadline) {
+					const deadline = new Date(roomData.round.setupDeadline).getTime();
+					if (Date.now() >= deadline) {
+						await checkAutoConfirm({ roomId: roomData.room.id });
+					}
 				}
 			}
 		} catch (e) {
@@ -99,7 +115,7 @@
 		}
 	}
 
-	// Single polling effect with cleanup
+	// Polling effect with cleanup
 	$effect(() => {
 		const code = roomCode;
 		loading = true;
@@ -116,7 +132,6 @@
 		if (!roomData) return;
 		try {
 			await startGame({ roomId: roomData.room.id, playerId: playerId! });
-			await fetchState();
 		} catch (e) {
 			console.error('Failed to start game:', e);
 		}
@@ -125,8 +140,8 @@
 	async function handleLeaveRoom() {
 		if (!roomData || !playerId) return;
 		try {
-			const result = await leaveRoom({ roomId: roomData.room.id, playerId });
-			localStorage.removeItem('playerId');
+			await leaveRoom({ roomId: roomData.room.id, playerId });
+			localStorage.removeItem(`bingo:player:${roomCode}`);
 			goto(resolve('/'));
 		} catch (e) {
 			showToast(e instanceof Error ? e.message : 'Failed to leave room');
@@ -136,6 +151,21 @@
 	function confirmLeave() {
 		showLeaveConfirm = false;
 		handleLeaveRoom();
+	}
+
+	async function handleRejoin() {
+		if (!rejoinName.trim()) return;
+		rejoinLoading = true;
+		try {
+			const result = await rejoinRoom({ roomCode, displayName: rejoinName.trim() });
+			localStorage.setItem(`bingo:player:${roomCode}`, result.playerId);
+			// Force page reload to pick up new playerId
+			window.location.reload();
+		} catch (e) {
+			showToast(e instanceof Error ? e.message : 'Failed to rejoin');
+		} finally {
+			rejoinLoading = false;
+		}
 	}
 </script>
 
@@ -248,6 +278,37 @@
 					Leave
 				</button>
 			</div>
+		</div>
+	</div>
+{/if}
+
+{#if showRejoinForm && roomData?.room.status !== 'round_ended' && roomData?.room.status === 'waiting'}
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+		<div class="card flex flex-col items-center gap-5 p-8 mx-4 max-w-sm w-full animate-pop">
+			<h2 class="text-xl text-[#3d3428]">Rejoin Room?</h2>
+			<p class="text-sm text-[#7a6e60] text-center">
+				Your session expired. Enter your name to rejoin.
+			</p>
+			<form
+				onsubmit={(e) => { e.preventDefault(); handleRejoin(); }}
+				class="flex flex-col gap-4 w-full"
+			>
+				<input
+					type="text"
+					bind:value={rejoinName}
+					maxlength={20}
+					required
+					class="input"
+					placeholder="Enter your name"
+				/>
+				<button
+					type="submit"
+					disabled={rejoinLoading || !rejoinName.trim()}
+					class="btn btn-gold w-full disabled:opacity-50"
+				>
+					{rejoinLoading ? 'Joining...' : 'Rejoin'}
+				</button>
+			</form>
 		</div>
 	</div>
 {/if}

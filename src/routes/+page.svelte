@@ -14,7 +14,7 @@
 		loading = true;
 		try {
 			const result = await createRoom({ displayName, maxPlayers });
-			localStorage.setItem('playerId', result.playerId);
+			localStorage.setItem(`bingo:player:${result.code}`, result.playerId);
 			goto(resolve('/room/[code]', { code: result.code }));
 		} catch (e: unknown) {
 			showToast(e instanceof Error ? e.message : 'Failed to create room');
@@ -27,7 +27,7 @@
 		loading = true;
 		try {
 			const result = await joinRoom({ roomCode: roomCode.toUpperCase(), displayName });
-			localStorage.setItem('playerId', result.playerId);
+			localStorage.setItem(`bingo:player:${result.code}`, result.playerId);
 			goto(resolve('/room/[code]', { code: result.code }));
 		} catch (e: unknown) {
 			showToast(e instanceof Error ? e.message : 'Failed to join room');

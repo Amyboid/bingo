@@ -2,7 +2,7 @@
 	import Board from './Board.svelte';
 	import TurnIndicator from './TurnIndicator.svelte';
 	import { callNumber, sweepLine, callBingo, autoCallNumber } from '$lib/game/board.remote';
-	import { getLineCells } from '$lib/server/game/utils';
+	import { getLineCells } from '$lib/game/utils';
 	import { showToast } from '$lib/toast';
 
 	let {
