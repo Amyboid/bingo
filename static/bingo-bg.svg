@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <!-- Background base color -->
+  <rect fill="#e8e2da" width="1200" height="800"/>
+  
+  <!-- Bingo Balls -->
+  <!-- B ball (coral) -->
+  <circle cx="120" cy="90" r="28" fill="#e07850" opacity="1"/>
+  <text x="120" y="96" text-anchor="middle" fill="#3d3428" opacity="1" font-size="14" font-family="Fredoka One, sans-serif">69</text>
+  
+  <!-- I ball (gold) -->
+  <circle cx="980" cy="150" r="32" fill="#e8a838" opacity="1"/>
+  <text x="980" y="157" text-anchor="middle" fill="#3d3428" opacity="1" font-size="16" font-family="Fredoka One, sans-serif">10</text>
+  
+  <!-- N ball (green) -->
+  <circle cx="280" cy="620" r="26" fill="#7cb87a" opacity="1"/>
+  <text x="280" y="626" text-anchor="middle" fill="#3d3428" opacity="1" font-size="13" font-family="Fredoka One, sans-serif">25</text>
+  
+  <!-- G ball (blue) -->
+  <circle cx="850" cy="680" r="30" fill="#6a9ecf" opacity="1"/>
+  <text x="850" y="687" text-anchor="middle" fill="#3d3428" opacity="1" font-size="15" font-family="Fredoka One, sans-serif">5</text>
+  
+  <!-- O ball (purple) -->
+  <circle cx="1050" cy="420" r="24" fill="#b07cc6" opacity="1"/>
+  <text x="1050" y="426" text-anchor="middle" fill="#3d3428" opacity="1" font-size="12" font-family="Fredoka One, sans-serif">8</text>
+  
+  <!-- Extra B ball -->
+  <circle cx="450" cy="120" r="22" fill="#e07850" opacity="1"/>
+  <text x="450" y="125" text-anchor="middle" fill="#3d3428" opacity="1" font-size="11" font-family="Fredoka One, sans-serif">23</text>
+  
+  <!-- Mini Bingo Cards -->
+  <!-- Card 1 -->
+  <g transform="translate(650, 80) rotate(-8)" opacity="1">
+    <rect x="0" y="0" width="52" height="52" rx="4" fill="#f5f0e8" stroke="#d5cec4" stroke-width="1"/>
+    <line x1="10.4" y1="0" x2="10.4" y2="52" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="20.8" y1="0" x2="20.8" y2="52" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="31.2" y1="0" x2="31.2" y2="52" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="41.6" y1="0" x2="41.6" y2="52" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="0" y1="10.4" x2="52" y2="10.4" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="0" y1="20.8" x2="52" y2="20.8" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="0" y1="31.2" x2="52" y2="31.2" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="0" y1="41.6" x2="52" y2="41.6" stroke="#d5cec4" stroke-width="0.5"/>
+  </g>
+  
+  <!-- Card 2 -->
+  <g transform="translate(150, 450) rotate(5)" opacity="1">
+    <rect x="0" y="0" width="48" height="48" rx="4" fill="#f5f0e8" stroke="#d5cec4" stroke-width="1"/>
+    <line x1="9.6" y1="0" x2="9.6" y2="48" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="19.2" y1="0" x2="19.2" y2="48" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="28.8" y1="0" x2="28.8" y2="48" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="38.4" y1="0" x2="38.4" y2="48" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="0" y1="9.6" x2="48" y2="9.6" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="0" y1="19.2" x2="48" y2="19.2" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="0" y1="28.8" x2="48" y2="28.8" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="0" y1="38.4" x2="48" y2="38.4" stroke="#d5cec4" stroke-width="0.5"/>
+  </g>
+  
+  <!-- Card 3 -->
+  <g transform="translate(780, 520) rotate(-3)" opacity="1">
+    <rect x="0" y="0" width="44" height="44" rx="3" fill="#f5f0e8" stroke="#d5cec4" stroke-width="1"/>
+    <line x1="8.8" y1="0" x2="8.8" y2="44" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="17.6" y1="0" x2="17.6" y2="44" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="26.4" y1="0" x2="26.4" y2="44" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="35.2" y1="0" x2="35.2" y2="44" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="0" y1="8.8" x2="44" y2="8.8" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="0" y1="17.6" x2="44" y2="17.6" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="0" y1="26.4" x2="44" y2="26.4" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="0" y1="35.2" x2="44" y2="35.2" stroke="#d5cec4" stroke-width="0.5"/>
+  </g>
+  
+  <!-- Ink Daubers -->
+  <!-- Dauber 1 (coral) -->
+  <circle cx="350" cy="380" r="20" fill="#e07850" opacity="1"/>
+  
+  <!-- Dauber 2 (gold) -->
+  <circle cx="720" cy="350" r="18" fill="#e8a838" opacity="1"/>
+  
+  <!-- Dauber 3 (green) -->
+  <circle cx="520" cy="700" r="22" fill="#7cb87a" opacity="1"/>
+  
+  <!-- Dauber 4 (blue) -->
+  <circle cx="950" cy="250" r="16" fill="#6a9ecf" opacity="1"/>
+  
+  <!-- Dauber 5 (purple) -->
+  <circle cx="200" cy="200" r="19" fill="#b07cc6" opacity="1"/>
+  
+  <!-- Decorative Stars -->
+  <!-- Star 1 (gold) -->
+  <polygon points="600,50 604,62 616,62 606,70 610,82 600,74 590,82 594,70 584,62 596,62" fill="#e8a838" opacity="1"/>
+  
+  <!-- Star 2 (white) -->
+  <polygon points="100,350 103,358 111,358 105,363 107,371 100,366 93,371 95,363 89,358 97,358" fill="white" opacity="1"/>
+  
+  <!-- Star 3 (gold) -->
+  <polygon points="900,750 903,758 911,758 905,763 907,771 900,766 893,771 895,763 889,758 897,758" fill="#e8a838" opacity="1"/>
+  
+  <!-- Star 4 (white) -->
+  <polygon points="1100,100 1103,108 1111,108 1105,113 1107,121 1100,116 1093,121 1095,113 1089,108 1097,108" fill="white" opacity="1"/>
+  
+  <!-- Star 5 (coral) -->
+  <polygon points="400,550 403,558 411,558 405,563 407,571 400,566 393,571 395,563 389,558 397,558" fill="#e07850" opacity="1"/>
+  
+  <!-- Small additional elements for variety -->
+  <!-- Small ball -->
+  <circle cx="1120" cy="600" r="15" fill="#7cb87a" opacity="1"/>
+  <text x="1120" y="604" text-anchor="middle" fill="#3d3428" opacity="1" font-size="9" font-family="Fredoka One, sans-serif">N12</text>
+  
+  <!-- Tiny card -->
+  <g transform="translate(50, 700) rotate(12)" opacity="1">
+    <rect x="0" y="0" width="32" height="32" rx="2" fill="#f5f0e8" stroke="#d5cec4" stroke-width="0.5"/>
+    <line x1="6.4" y1="0" x2="6.4" y2="32" stroke="#d5cec4" stroke-width="0.3"/>
+    <line x1="12.8" y1="0" x2="12.8" y2="32" stroke="#d5cec4" stroke-width="0.3"/>
+    <line x1="19.2" y1="0" x2="19.2" y2="32" stroke="#d5cec4" stroke-width="0.3"/>
+    <line x1="25.6" y1="0" x2="25.6" y2="32" stroke="#d5cec4" stroke-width="0.3"/>
+    <line x1="0" y1="6.4" x2="32" y2="6.4" stroke="#d5cec4" stroke-width="0.3"/>
+    <line x1="0" y1="12.8" x2="32" y2="12.8" stroke="#d5cec4" stroke-width="0.3"/>
+    <line x1="0" y1="19.2" x2="32" y2="19.2" stroke="#d5cec4" stroke-width="0.3"/>
+    <line x1="0" y1="25.6" x2="32" y2="25.6" stroke="#d5cec4" stroke-width="0.3"/>
+  </g>
+  
+  <!-- Small dauber -->
+  <circle cx="1050" cy="700" r="12" fill="#b07cc6" opacity="1"/>
+  <ellipse cx="1050" cy="698" rx="5" ry="2" fill="white" opacity="1"/>
+  
+  <!-- Tiny star -->
+  <polygon points="700,180 702,186 708,186 703,190 705,196 700,192 695,196 697,190 692,186 698,186" fill="#e8a838" opacity="1"/>
+</svg>

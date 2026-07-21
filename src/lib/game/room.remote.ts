@@ -3,7 +3,7 @@ import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { db } from '$lib/server/db';
 import { rooms, players, rounds, playerBoards } from '$lib/server/db/schema';
-import { eq, and, desc, lt, count } from 'drizzle-orm';
+import { eq, and, or, desc, lt, count } from 'drizzle-orm';
 import { generateRoomCode } from '$lib/server/game/utils';
 
 async function runCleanup() {
@@ -179,7 +179,10 @@ export const leaveRoom = command(
 			const [latestRound] = await db
 				.select()
 				.from(rounds)
-				.where(and(eq(rounds.roomId, roomId), eq(rounds.status, 'active')))
+				.where(and(eq(rounds.roomId, roomId), or(
+					eq(rounds.status, 'active'),
+					eq(rounds.status, 'setup')
+				)))
 				.limit(1);
 
 			if (latestRound) {
