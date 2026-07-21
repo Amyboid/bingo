@@ -51,6 +51,7 @@
 	let rejoinName = $state('');
 	let rejoinLoading = $state(false);
 	let previousHostId = $state<string | null>(null);
+	let startingGame = $state(false);
 
 	// Detect host transfer and notify
 	$effect(() => {
@@ -144,10 +145,13 @@
 
 	async function handleStartGame() {
 		if (!roomData) return;
+		startingGame = true;
 		try {
 			await startGame({ roomId: roomData.room.id, playerId: playerId! });
 		} catch (e) {
 			showToast(getErrorMessage(e, 'Failed to start game'));
+		} finally {
+			startingGame = false;
 		}
 	}
 
@@ -262,7 +266,7 @@
 				playerName={currentPlayer?.displayName ?? 'Unknown'}
 				{allCalledNumbers}
 			/>
-		{:else if roomData?.room.status === 'round_ended' && !winner}
+		{:else if roomData?.room.status === 'round_ended' && !winner && !startingGame}
 			<div class="card flex flex-col items-center gap-5 p-8 max-w-sm w-full animate-pop">
 				<h2 class="text-2xl text-[#3d3428]">Round Ended</h2>
 				<p class="text-sm text-[#7a6e60] text-center">
