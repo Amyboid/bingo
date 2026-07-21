@@ -71,8 +71,8 @@
   <!-- Dauber 1 (coral) -->
   <circle cx="350" cy="380" r="20" fill="#e07850" opacity="1"/>
   
-  <!-- Dauber 2 (gold) -->
-  <circle cx="720" cy="350" r="18" fill="#e8a838" opacity="1"/>
+  <!-- Dauber 2 (gold)
+  <circle cx="720" cy="350" r="18" fill="#e8a838" opacity="1"/> -->
   
   <!-- Dauber 3 (green) -->
   <circle cx="520" cy="700" r="22" fill="#7cb87a" opacity="1"/>

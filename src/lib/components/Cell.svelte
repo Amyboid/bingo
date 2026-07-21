@@ -88,7 +88,7 @@
 	{#if editing}
 		<input bind:this={inputEl} type="number" min="1" max="25" bind:value={editValue}
 			onblur={commitEdit} onkeydown={handleKeydown}
-			class="absolute inset-0 w-full h-full rounded-[10px] bg-white text-center text-xl font-bold text-[#3d3428] outline-none border-2 border-[#e8a838]" />
+			class="absolute inset-0 w-full h-full rounded-[10px] bg-white text-center text-xl font-bold text-text outline-none border-2 border-primary" />
 	{:else}
 		{value}
 	{/if}

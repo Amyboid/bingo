@@ -199,7 +199,7 @@
 
 <div class="flex flex-col md:flex-row min-h-screen bg-zinc-950">
 	<!-- Sidebar -->
-	<aside class="w-full md:w-56 border-b md:border-b-0 md:border-r-2 border-[#d5cec4] bg-[#f5f0e8]/80 p-4 flex md:flex-col items-center md:items-start gap-4">
+	<aside class="w-full md:w-56 border-b md:border-b-0 md:border-r-2 border-border bg-card/80 p-4 flex md:flex-col items-center md:items-start gap-4">
 		<div class="flex items-center gap-3">
 			<h1 class="text-lg text-white" style="text-shadow: 0 2px 0 rgba(0,0,0,0.1);">Bingo</h1>
 			<button
@@ -210,7 +210,7 @@
 						showToast('Failed to copy', 'error');
 					});
 				}}
-				class="btn-curve bg-[#a09890] text-xs px-3 py-1"
+				class="btn-curve bg-gray text-xs px-3 py-1"
 				title="Click to copy"
 			>
 				{roomCode}
@@ -220,12 +220,12 @@
 			<PlayerList
 				players={roomData.players}
 				currentPlayerId={playerId}
-				currentTurnPlayerId={roomData.round?.currentTurnPlayerId}
+				currentTurnPlayerId={roomData.round?.currentTurnPlayerId ?? null}
 				hostId={roomData.room.hostId}
 			/>
 			<button
 				onclick={() => (showLeaveConfirm = true)}
-				class="btn-curve bg-[#e07850] text-xs px-3 py-1 mt-auto md:mt-4"
+				class="btn-curve bg-secondary text-xs px-3 py-1 mt-auto md:mt-4"
 			>
 				Leave
 			</button>
@@ -235,8 +235,8 @@
 	<main class="flex flex-1 items-center justify-center p-4 md:p-8">
 		{#if loading}
 			<div class="flex flex-col items-center gap-4">
-				<div class="h-10 w-10 border-4 border-[#d5cec4] border-t-[#e8a838] rounded-full animate-spin"></div>
-				<p class="text-[#7a6e60] text-sm">Loading...</p>
+				<div class="h-10 w-10 border-4 border-border border-t-primary rounded-full animate-spin"></div>
+				<p class="text-text-light text-sm">Loading...</p>
 			</div>
 		{:else if roomData?.room.status === 'waiting'}
 			<Lobby
@@ -273,20 +273,20 @@
 			/>
 		{:else if roomData?.room.status === 'round_ended' && !winner && !startingGame}
 			<div class="card flex flex-col items-center gap-5 p-8 max-w-sm w-full animate-pop">
-				<h2 class="text-2xl text-[#3d3428]">Round Ended</h2>
-				<p class="text-sm text-[#7a6e60] text-center">
+				<h2 class="text-2xl text-text">Round Ended</h2>
+				<p class="text-sm text-text-light text-center">
 					Not enough players to continue. Go back to lobby to invite more players.
 				</p>
-				<div class="w-full rounded-xl bg-[#f5f0e8] p-4">
-					<h3 class="text-[10px] font-semibold text-[#aaa298] uppercase tracking-wider mb-3">Current Players</h3>
+				<div class="w-full rounded-xl bg-card p-4">
+					<h3 class="text-[10px] font-semibold text-muted uppercase tracking-wider mb-3">Current Players</h3>
 					{#each playerScores as player, i (player.displayName)}
 						<div class="flex items-center justify-between py-2">
 							<div class="flex items-center gap-2">
-								<div class="h-5 w-5 rounded-full" style="background: {['#e07850', '#e8a838', '#7cb87a', '#6a9ecf', '#b07cc6'][i % 5]};"></div>
-								<span class="text-sm font-semibold text-[#3d3428]">{player.displayName}</span>
+								<div class="h-5 w-5 rounded-full bg-{['secondary', 'primary', 'success', 'blue', 'purple'][i % 5]}"></div>
+								<span class="text-sm font-semibold text-text">{player.displayName}</span>
 							</div>
 							<div class="flex items-center gap-0.5">
-								{#each Array(roomData?.room.gridSize ?? 5) as _, j (j)}<span class="text-xs" class:text-[#e8a838]={j < player.points} class:text-[#d5cec4]={j >= player.points}>★</span>{/each}
+								{#each Array(roomData?.room.gridSize ?? 5) as _, j (j)}<span class="text-xs" class:text-primary={j < player.points} class:text-border={j >= player.points}>★</span>{/each}
 							</div>
 						</div>
 					{/each}
@@ -294,13 +294,13 @@
 				{#if isHost}
 					<button onclick={handleBackToLobby} class="btn btn-gold btn-lg w-full">Back to Lobby</button>
 				{:else}
-					<p class="text-sm text-[#aaa298] animate-pulse">Waiting for host...</p>
+					<p class="text-sm text-muted animate-pulse">Waiting for host...</p>
 				{/if}
 			</div>
 		{:else}
 			<div class="flex flex-col items-center gap-4">
-				<div class="h-10 w-10 border-4 border-[#d5cec4] border-t-[#e8a838] rounded-full animate-spin"></div>
-				<p class="text-[#7a6e60] text-sm">Connecting...</p>
+				<div class="h-10 w-10 border-4 border-border border-t-primary rounded-full animate-spin"></div>
+				<p class="text-text-light text-sm">Connecting...</p>
 			</div>
 		{/if}
 	</main>
@@ -320,8 +320,8 @@
 {#if showLeaveConfirm}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
 		<div class="card flex flex-col items-center gap-5 p-8 mx-4 max-w-sm w-full animate-pop">
-			<h2 class="text-xl text-[#3d3428]">Leave Room?</h2>
-			<p class="text-sm text-[#7a6e60] text-center">
+			<h2 class="text-xl text-text">Leave Room?</h2>
+			<p class="text-sm text-text-light text-center">
 				Are you sure you want to leave? You'll need a new invite to rejoin.
 			</p>
 			<div class="flex gap-3 w-full">
@@ -345,8 +345,8 @@
 {#if showRejoinForm && roomData?.room.status !== 'round_ended' && roomData?.room.status === 'waiting'}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
 		<div class="card flex flex-col items-center gap-5 p-8 mx-4 max-w-sm w-full animate-pop">
-			<h2 class="text-xl text-[#3d3428]">Rejoin Room?</h2>
-			<p class="text-sm text-[#7a6e60] text-center">
+			<h2 class="text-xl text-text">Rejoin Room?</h2>
+			<p class="text-sm text-text-light text-center">
 				Your session expired. Enter your name to rejoin.
 			</p>
 			<form
