@@ -56,9 +56,16 @@
 		inset: 0;
 		background-image: url('/bingo-bg.svg');
 		background-size: cover;
+		background-position: center;
 		opacity: var(--bg-bingo-opacity);
 		pointer-events: none;
 		z-index: -1;
+	}
+
+	@media (max-width: 640px) {
+		body::before {
+			background-size: auto;
+		}
 	}
 
 	/* Scrollbar */

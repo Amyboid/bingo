@@ -102,7 +102,7 @@
   <!-- Small additional elements for variety -->
   <!-- Small ball -->
   <circle cx="1120" cy="600" r="15" fill="#7cb87a" opacity="1"/>
-  <text x="1120" y="604" text-anchor="middle" fill="#3d3428" opacity="1" font-size="9" font-family="Fredoka One, sans-serif">N12</text>
+  <text x="1120" y="604" text-anchor="middle" fill="#3d3428" opacity="1" font-size="9" font-family="Fredoka One, sans-serif">12</text>
   
   <!-- Tiny card -->
   <g transform="translate(50, 700) rotate(12)" opacity="1">
