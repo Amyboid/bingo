@@ -2,7 +2,7 @@
 	import Board from './Board.svelte';
 	import TurnIndicator from './TurnIndicator.svelte';
 	import { callNumber, sweepLine, callBingo, autoCallNumber } from '$lib/game/board.remote';
-	import { getLineCells } from '$lib/game/utils';
+	import { getLineCells, numberOnGrid } from '$lib/game/utils';
 	import { showToast, getErrorMessage } from '$lib/toast';
 
 	let {
@@ -35,6 +35,7 @@
 	let turnTimeLeft = $state(30);
 	let optimisticMarks = $state<[number, number][]>([]);
 	let optimisticSweptLines = $state<string[]>([]);
+	let autoCalled = $state(false);
 
 	// Drag state for swipe-to-sweep
 	let isDragging = $state(false);
@@ -43,6 +44,7 @@
 	const isMyTurn = $derived(currentTurnPlayerId === playerId);
 	const displayMarked = $derived([...marked, ...optimisticMarks]);
 	const displaySweptLines = $derived([...sweptLines, ...optimisticSweptLines]);
+	const turnTimestamp = $derived(turnStartedAt ? new Date(turnStartedAt).getTime() : 0);
 
 	// Layout constants (responsive to match Tailwind sm: breakpoints)
 	let windowWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 1024);
@@ -60,16 +62,31 @@
 	const HEADER_H = $derived(isSmall ? 48 : 40);
 	const PADDING = $derived(isSmall ? 24 : 16);
 
-	// 30s turn timer with auto-call
+	// 30s turn timer + auto-call
 	$effect(() => {
-		const startedAt = turnStartedAt;
-		if (!startedAt) {
+		const turnKey = turnTimestamp;
+		autoCalled = false;
+
+		if (!turnKey) {
 			turnTimeLeft = 0;
 			return;
 		}
 
-		const deadline = new Date(startedAt).getTime() + 30_000;
-		let autoCalled = false;
+		const deadline = turnKey + 30_000;
+		const deadlineMs = deadline - Date.now();
+		if (deadlineMs <= 0) {
+			turnTimeLeft = 0;
+			if (!autoCalled) {
+				autoCalled = true;
+				autoCallNumber({ roomId, playerId }).then((result) => {
+					if (result?.autoCalled && result.number) {
+						const pos = numberOnGrid(grid, result.number);
+						if (pos) optimisticMarks = [...optimisticMarks, pos];
+					}
+				}).catch(() => {});
+			}
+			return;
+		}
 
 		const update = () => {
 			turnTimeLeft = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
@@ -78,19 +95,16 @@
 		update();
 		const interval = setInterval(update, 100);
 
-		const timeout = setTimeout(async () => {
-			if (isMyTurn && !autoCalled) {
-				autoCalled = true;
-				try {
-					await autoCallNumber({ roomId, playerId });
-				} catch (e) {
-					// "Not your turn" is expected when the turn changes before auto-call fires
-					if (e instanceof Error && e.message !== 'Not your turn') {
-						console.error('Auto-call failed:', e);
-					}
+		const timeout = setTimeout(() => {
+			if (autoCalled) return;
+			autoCalled = true;
+			autoCallNumber({ roomId, playerId }).then((result) => {
+				if (result?.autoCalled && result.number) {
+					const pos = numberOnGrid(grid, result.number);
+					if (pos) optimisticMarks = [...optimisticMarks, pos];
 				}
-			}
-		}, Math.max(0, deadline - Date.now()));
+			}).catch(() => {});
+		}, deadlineMs);
 
 		return () => {
 			clearInterval(interval);
