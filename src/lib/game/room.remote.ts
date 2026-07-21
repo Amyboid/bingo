@@ -3,8 +3,37 @@ import { error } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { db } from '$lib/server/db';
 import { rooms, players, rounds, playerBoards } from '$lib/server/db/schema';
-import { eq, and, desc, lt } from 'drizzle-orm';
+import { eq, and, desc, lt, count } from 'drizzle-orm';
 import { generateRoomCode } from '$lib/server/game/utils';
+
+async function runCleanup() {
+	const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+	const staleRooms = await db
+		.select({ id: rooms.id })
+		.from(rooms)
+		.where(and(lt(rooms.createdAt, oneDayAgo), eq(rooms.status, 'waiting')))
+		.limit(50);
+
+	const endedRooms = await db
+		.select({ id: rooms.id })
+		.from(rooms)
+		.where(and(lt(rooms.createdAt, oneDayAgo), eq(rooms.status, 'round_ended')))
+		.limit(50);
+
+	const allStaleIds = [...staleRooms, ...endedRooms].map((r) => r.id);
+
+	for (const roomId of allStaleIds) {
+		const playerCount = await db
+			.select({ value: count() })
+			.from(players)
+			.where(eq(players.roomId, roomId));
+
+		if (playerCount[0].value === 0) {
+			await db.delete(rooms).where(eq(rooms.id, roomId));
+		}
+	}
+}
 
 export const getRoomState = query(v.string(), async (roomCode) => {
 	const [room] = await db.select().from(rooms).where(eq(rooms.code, roomCode));
@@ -58,6 +87,9 @@ export const createRoom = command(
 
 		await db.update(rooms).set({ hostId: player.id }).where(eq(rooms.id, room.id));
 
+		// Background cleanup of stale rooms
+		runCleanup().catch(() => {});
+
 		return { code, playerId: player.id };
 	}
 );
@@ -69,8 +101,8 @@ export const joinRoom = command(
 	}),
 	async ({ roomCode, displayName }) => {
 		const [room] = await db.select().from(rooms).where(eq(rooms.code, roomCode));
-		if (!room) throw new Error('Room not found');
-		if (room.status !== 'waiting') throw new Error('Game already in progress');
+		if (!room) error(400,'Room not found');
+		if (room.status !== 'waiting') error(400,'Game already in progress');
 
 		const existingPlayers = await db
 			.select()
@@ -78,13 +110,13 @@ export const joinRoom = command(
 			.where(eq(players.roomId, room.id));
 
 		if (existingPlayers.length >= room.maxPlayers) {
-			throw new Error('Room is full');
+			error(400,'Room is full');
 		}
 
 		const nameTaken = existingPlayers.some(
 			(p) => p.displayName.toLowerCase() === displayName.toLowerCase()
 		);
-		if (nameTaken) throw new Error('Name already taken');
+		if (nameTaken) error(400,'Name already taken');
 
 		const [player] = await db
 			.insert(players)
@@ -94,6 +126,9 @@ export const joinRoom = command(
 				joinOrder: existingPlayers.length + 1
 			})
 			.returning();
+
+		// Background cleanup of stale rooms
+		runCleanup().catch(() => {});
 
 		return { code: roomCode, playerId: player.id };
 	}
@@ -106,14 +141,14 @@ export const leaveRoom = command(
 	}),
 	async ({ roomId, playerId }) => {
 		const [room] = await db.select().from(rooms).where(eq(rooms.id, roomId));
-		if (!room) throw new Error('Room not found');
+		if (!room) error(400,'Room not found');
 
 		const [player] = await db
 			.select()
 			.from(players)
 			.where(and(eq(players.roomId, roomId), eq(players.id, playerId)))
 			.limit(1);
-		if (!player) throw new Error('Player not in this room');
+		if (!player) error(400,'Player not in this room');
 
 		// Delete the player (cascade will handle boards)
 		await db.delete(players).where(eq(players.id, playerId));
@@ -160,6 +195,14 @@ export const leaveRoom = command(
 			}
 		}
 
+		// If round_ended and only 1 player remains, go back to waiting
+		if (room.status === 'round_ended' && remaining.length === 1) {
+			await db
+				.update(rooms)
+				.set({ status: 'waiting' })
+				.where(eq(rooms.id, roomId));
+		}
+
 		return { left: true, roomDeleted: false };
 	}
 );
@@ -199,12 +242,21 @@ export const cleanupStaleRooms = command(
 			return { cleaned: 0 };
 		}
 
-		// Delete stale rooms (cascade will handle players, rounds, boards)
+		// Only delete rooms with 0 players (cascade will handle rounds, boards)
+		let cleaned = 0;
 		for (const roomId of allStaleIds) {
-			await db.delete(rooms).where(eq(rooms.id, roomId));
+			const playerCount = await db
+				.select({ value: count() })
+				.from(players)
+				.where(eq(players.roomId, roomId));
+
+			if (playerCount[0].value === 0) {
+				await db.delete(rooms).where(eq(rooms.id, roomId));
+				cleaned++;
+			}
 		}
 
-		return { cleaned: allStaleIds.length };
+		return { cleaned };
 	}
 );
 
@@ -215,8 +267,8 @@ export const rejoinRoom = command(
 	}),
 	async ({ roomCode, displayName }) => {
 		const [room] = await db.select().from(rooms).where(eq(rooms.code, roomCode));
-		if (!room) throw new Error('Room not found');
-		if (room.status === 'in_progress') throw new Error('Game already in progress');
+		if (!room) error(400,'Room not found');
+		if (room.status === 'in_progress') error(400,'Game already in progress');
 
 		// Check if name is taken by existing players
 		const existingPlayers = await db
@@ -225,13 +277,13 @@ export const rejoinRoom = command(
 			.where(eq(players.roomId, room.id));
 
 		if (existingPlayers.length >= room.maxPlayers) {
-			throw new Error('Room is full');
+			error(400,'Room is full');
 		}
 
 		const nameTaken = existingPlayers.some(
 			(p) => p.displayName.toLowerCase() === displayName.toLowerCase()
 		);
-		if (nameTaken) throw new Error('Name already taken');
+		if (nameTaken) error(400,'Name already taken');
 
 		// Create new player entry
 		const [player] = await db
@@ -244,5 +296,40 @@ export const rejoinRoom = command(
 			.returning();
 
 		return { code: roomCode, playerId: player.id };
+	}
+);
+
+export const backToLobby = command(
+	v.object({
+		roomId: v.string(),
+		playerId: v.string()
+	}),
+	async ({ roomId, playerId }) => {
+		const [room] = await db.select().from(rooms).where(eq(rooms.id, roomId));
+		if (!room) error(400,'Room not found');
+		if (room.hostId !== playerId) error(400,'Only host can go back to lobby');
+
+		// Already in lobby — nothing to do
+		if (room.status === 'waiting') return { success: true };
+
+		if (room.status !== 'round_ended') error(400,'Room is not in round_ended state');
+
+		// Clean up old rounds
+		const oldRounds = await db
+			.select({ id: rounds.id })
+			.from(rounds)
+			.where(eq(rounds.roomId, roomId));
+
+		for (const oldRound of oldRounds) {
+			await db.delete(playerBoards).where(eq(playerBoards.roundId, oldRound.id));
+			await db.delete(rounds).where(eq(rounds.id, oldRound.id));
+		}
+
+		await db
+			.update(rooms)
+			.set({ status: 'waiting' })
+			.where(eq(rooms.id, roomId));
+
+		return { success: true };
 	}
 );

@@ -2,14 +2,14 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { getRoomState, leaveRoom, rejoinRoom } from '$lib/game/room.remote';
+	import { getRoomState, leaveRoom, rejoinRoom, backToLobby } from '$lib/game/room.remote';
 	import { startGame, checkAutoConfirm } from '$lib/game/board.remote';
 	import Lobby from '$lib/components/Lobby.svelte';
 	import PlayerList from '$lib/components/PlayerList.svelte';
 	import SetupPhase from '$lib/components/SetupPhase.svelte';
 	import PlayPhase from '$lib/components/PlayPhase.svelte';
 	import WinOverlay from '$lib/components/WinOverlay.svelte';
-	import { showToast } from '$lib/toast';
+	import { showToast, getErrorMessage } from '$lib/toast';
 	import type { RoomState } from '$lib/game/types';
 
 	const roomCode = $derived(page.params.code ?? '');
@@ -50,6 +50,16 @@
 	let showRejoinForm = $state(false);
 	let rejoinName = $state('');
 	let rejoinLoading = $state(false);
+	let previousHostId = $state<string | null>(null);
+
+	// Detect host transfer and notify
+	$effect(() => {
+		const currentHostId = roomData?.room.hostId;
+		if (currentHostId && previousHostId && currentHostId !== previousHostId && currentHostId === playerId) {
+			showToast('You are now the host!', 'success');
+		}
+		previousHostId = currentHostId ?? null;
+	});
 
 	const currentPlayer = $derived(roomData?.players.find((p) => p.id === playerId));
 	const isHost = $derived(roomData?.room.hostId === playerId);
@@ -106,7 +116,11 @@
 				if (roomData?.round?.status === 'setup' && roomData.round.setupDeadline) {
 					const deadline = new Date(roomData.round.setupDeadline).getTime();
 					if (Date.now() >= deadline) {
-						await checkAutoConfirm({ roomId: roomData.room.id });
+						try {
+							await checkAutoConfirm({ roomId: roomData.room.id });
+						} catch {
+							// Silently ignore — round may have already started
+						}
 					}
 				}
 			}
@@ -133,7 +147,7 @@
 		try {
 			await startGame({ roomId: roomData.room.id, playerId: playerId! });
 		} catch (e) {
-			console.error('Failed to start game:', e);
+			showToast(getErrorMessage(e, 'Failed to start game'));
 		}
 	}
 
@@ -144,7 +158,7 @@
 			localStorage.removeItem(`bingo:player:${roomCode}`);
 			goto(resolve('/'));
 		} catch (e) {
-			showToast(e instanceof Error ? e.message : 'Failed to leave room');
+			showToast(getErrorMessage(e, 'Failed to leave room'));
 		}
 	}
 
@@ -162,9 +176,18 @@
 			// Force page reload to pick up new playerId
 			window.location.reload();
 		} catch (e) {
-			showToast(e instanceof Error ? e.message : 'Failed to rejoin');
+			showToast(getErrorMessage(e, 'Failed to rejoin'));
 		} finally {
 			rejoinLoading = false;
+		}
+	}
+
+	async function handleBackToLobby() {
+		if (!roomData || !playerId) return;
+		try {
+			await backToLobby({ roomId: roomData.room.id, playerId });
+		} catch (e) {
+			showToast(getErrorMessage(e, 'Failed to go back to lobby'));
 		}
 	}
 </script>
@@ -193,6 +216,7 @@
 				players={roomData.players}
 				currentPlayerId={playerId}
 				currentTurnPlayerId={roomData.round?.currentTurnPlayerId}
+				hostId={roomData.room.hostId}
 			/>
 			<button
 				onclick={() => (showLeaveConfirm = true)}
@@ -238,6 +262,32 @@
 				playerName={currentPlayer?.displayName ?? 'Unknown'}
 				{allCalledNumbers}
 			/>
+		{:else if roomData?.room.status === 'round_ended' && !winner}
+			<div class="card flex flex-col items-center gap-5 p-8 max-w-sm w-full animate-pop">
+				<h2 class="text-2xl text-[#3d3428]">Round Ended</h2>
+				<p class="text-sm text-[#7a6e60] text-center">
+					Not enough players to continue. Go back to lobby to invite more players.
+				</p>
+				<div class="w-full rounded-xl bg-[#f5f0e8] p-4">
+					<h3 class="text-[10px] font-semibold text-[#aaa298] uppercase tracking-wider mb-3">Current Players</h3>
+					{#each playerScores as player, i (player.displayName)}
+						<div class="flex items-center justify-between py-2">
+							<div class="flex items-center gap-2">
+								<div class="h-5 w-5 rounded-full" style="background: {['#e07850', '#e8a838', '#7cb87a', '#6a9ecf', '#b07cc6'][i % 5]};"></div>
+								<span class="text-sm font-semibold text-[#3d3428]">{player.displayName}</span>
+							</div>
+							<div class="flex items-center gap-0.5">
+								{#each Array(5) as _, j (j)}<span class="text-xs" class:text-[#e8a838]={j < player.points} class:text-[#d5cec4]={j >= player.points}>★</span>{/each}
+							</div>
+						</div>
+					{/each}
+				</div>
+				{#if isHost}
+					<button onclick={handleBackToLobby} class="btn btn-gold btn-lg w-full">Back to Lobby</button>
+				{:else}
+					<p class="text-sm text-[#aaa298] animate-pulse">Waiting for host...</p>
+				{/if}
+			</div>
 		{:else}
 			<div class="flex flex-col items-center gap-4">
 				<div class="h-10 w-10 border-4 border-[#d5cec4] border-t-[#e8a838] rounded-full animate-spin"></div>

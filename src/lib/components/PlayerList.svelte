@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { players } from '$lib/server/db/schema';
-	let { players: playerList, currentPlayerId, currentTurnPlayerId }: {
-		players: typeof players.$inferSelect[]; currentPlayerId?: string | null; currentTurnPlayerId?: string | null;
+	let { players: playerList, currentPlayerId, currentTurnPlayerId, hostId }: {
+		players: typeof players.$inferSelect[]; currentPlayerId?: string | null; currentTurnPlayerId?: string | null; hostId?: string | null;
 	} = $props();
 	const COLORS = ['#e07850', '#e8a838', '#7cb87a', '#6a9ecf', '#b07cc6'];
 </script>
@@ -11,6 +11,7 @@
 	{#each playerList as player, i (player.id)}
 		{@const isTurn = player.id === currentTurnPlayerId}
 		{@const isMe = player.id === currentPlayerId}
+		{@const isHost = player.id === hostId}
 		<div class="flex items-center gap-2 sm:gap-3 rounded-xl px-3 py-2 transition-all duration-200 {isTurn ? 'bg-[#e8a838]/15 border-2 border-[#e8a838]/40' : 'bg-white/60 border border-[#d5cec4]'}">
 			<div class="h-7 w-7 rounded-full flex items-center justify-center text-xs text-white shrink-0"
 				style="background: {COLORS[i % COLORS.length]}; box-shadow: 0 2px 0 rgba(0,0,0,0.12);">
@@ -19,6 +20,7 @@
 			<span class="text-xs sm:text-sm font-semibold truncate max-w-[80px] sm:max-w-none {isTurn ? 'text-[#c48a28]' : 'text-[#3d3428]'}">
 				{player.displayName}
 			</span>
+			{#if isHost}<span class="text-[9px] font-bold text-[#e8a838] bg-[#e8a838]/15 px-1.5 py-0.5 rounded-full">HOST</span>{/if}
 			{#if isMe}<span class="ml-auto text-[10px] text-[#aaa298] hidden sm:inline">you</span>{/if}
 			{#if isTurn}<div class="ml-auto h-2 w-2 rounded-full bg-[#e8a838] sm:hidden"></div>{/if}
 		</div>

@@ -3,7 +3,7 @@
 	import TurnIndicator from './TurnIndicator.svelte';
 	import { callNumber, sweepLine, callBingo, autoCallNumber } from '$lib/game/board.remote';
 	import { getLineCells } from '$lib/game/utils';
-	import { showToast } from '$lib/toast';
+	import { showToast, getErrorMessage } from '$lib/toast';
 
 	let {
 		roomId,
@@ -84,7 +84,10 @@
 				try {
 					await autoCallNumber({ roomId, playerId });
 				} catch (e) {
-					console.error('Auto-call failed:', e);
+					// "Not your turn" is expected when the turn changes before auto-call fires
+					if (e instanceof Error && e.message !== 'Not your turn') {
+						console.error('Auto-call failed:', e);
+					}
 				}
 			}
 		}, Math.max(0, deadline - Date.now()));
@@ -160,7 +163,7 @@
 			optimisticMarks = [];
 		} catch (e: unknown) {
 			optimisticMarks = [];
-			showToast(e instanceof Error ? e.message : 'Failed to call number');
+			showToast(getErrorMessage(e, 'Failed to call number'));
 		} finally {
 			calling = false;
 		}
@@ -202,7 +205,7 @@
 			optimisticSweptLines = [];
 		} catch (e: unknown) {
 			optimisticSweptLines = optimisticSweptLines.filter((l) => !lineIds.includes(l));
-			showToast(e instanceof Error ? e.message : 'Failed to sweep line');
+			showToast(getErrorMessage(e, 'Failed to sweep line'));
 		}
 	}
 
@@ -211,7 +214,7 @@
 		try {
 			await callBingo({ roomId, playerId });
 		} catch (e: unknown) {
-			showToast(e instanceof Error ? e.message : 'Failed to call Bingo');
+			showToast(getErrorMessage(e, 'Failed to call Bingo'));
 		}
 	}
 	// Cached container ref for drag detection

@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { createRoom, joinRoom } from '$lib/game/room.remote';
-	import { showToast } from '$lib/toast';
+	import { showToast, getErrorMessage } from '$lib/toast';
 
 	let mode: 'create' | 'join' = $state('create');
 	let displayName = $state('');
@@ -17,7 +17,7 @@
 			localStorage.setItem(`bingo:player:${result.code}`, result.playerId);
 			goto(resolve('/room/[code]', { code: result.code }));
 		} catch (e: unknown) {
-			showToast(e instanceof Error ? e.message : 'Failed to create room');
+			showToast(getErrorMessage(e, 'Failed to create room'));
 		} finally {
 			loading = false;
 		}
@@ -30,7 +30,7 @@
 			localStorage.setItem(`bingo:player:${result.code}`, result.playerId);
 			goto(resolve('/room/[code]', { code: result.code }));
 		} catch (e: unknown) {
-			showToast(e instanceof Error ? e.message : 'Failed to join room');
+			showToast(getErrorMessage(e, 'Failed to join room'));
 		} finally {
 			loading = false;
 		}
