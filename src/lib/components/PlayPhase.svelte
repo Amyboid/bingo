@@ -9,6 +9,7 @@
 		roomId,
 		playerId,
 		grid,
+		winWord = 'BINGO',
 		marked,
 		points,
 		sweptLines,
@@ -21,6 +22,7 @@
 		roomId: string;
 		playerId: string;
 		grid: number[][];
+		winWord?: string;
 		marked: [number, number][];
 		points: number;
 		sweptLines: string[];
@@ -31,11 +33,14 @@
 		allCalledNumbers: number[];
 	} = $props();
 
+	const gridSize = $derived(winWord.length);
+
 	let calling = $state(false);
 	let turnTimeLeft = $state(30);
 	let optimisticMarks = $state<[number, number][]>([]);
 	let optimisticSweptLines = $state<string[]>([]);
 	let autoCalled = $state(false);
+	let cutLetters = $state(new Set<number>());
 
 	// Drag state for swipe-to-sweep
 	let isDragging = $state(false);
@@ -58,7 +63,7 @@
 	const isSmall = $derived(windowWidth >= 640);
 	const CELL = $derived(isSmall ? 64 : 56);
 	const GAP = $derived(isSmall ? 8 : 6);
-	const LABEL_W = $derived(isSmall ? 28 : 24);
+	const LABEL_W = $derived(0); // No left-side labels anymore
 	const HEADER_H = $derived(isSmall ? 48 : 40);
 	const PADDING = $derived(isSmall ? 24 : 16);
 
@@ -112,27 +117,27 @@
 		};
 	});
 
-	// Completable lines
+	// Completable lines (dynamic gridSize)
 	const completableLines = $derived.by(() => {
 		const lines: { id: string; cells: [number, number][] }[] = [];
 		const markedSet = new Set(displayMarked.map(([r, c]) => `${r},${c}`));
 
-		for (let i = 0; i < 5; i++) {
-			const rowCells: [number, number][] = Array.from({ length: 5 }, (_, c) => [i, c]);
+		for (let i = 0; i < gridSize; i++) {
+			const rowCells: [number, number][] = Array.from({ length: gridSize }, (_, c) => [i, c]);
 			if (rowCells.every(([r, c]) => markedSet.has(`${r},${c}`)) && !displaySweptLines.includes(`row-${i}`)) {
 				lines.push({ id: `row-${i}`, cells: rowCells });
 			}
-			const colCells: [number, number][] = Array.from({ length: 5 }, (_, r) => [r, i]);
+			const colCells: [number, number][] = Array.from({ length: gridSize }, (_, r) => [r, i]);
 			if (colCells.every(([r, c]) => markedSet.has(`${r},${c}`)) && !displaySweptLines.includes(`col-${i}`)) {
 				lines.push({ id: `col-${i}`, cells: colCells });
 			}
 		}
 
-		const diagMain: [number, number][] = Array.from({ length: 5 }, (_, i) => [i, i]);
+		const diagMain: [number, number][] = Array.from({ length: gridSize }, (_, i) => [i, i]);
 		if (diagMain.every(([r, c]) => markedSet.has(`${r},${c}`)) && !displaySweptLines.includes('diag-main')) {
 			lines.push({ id: 'diag-main', cells: diagMain });
 		}
-		const diagAnti: [number, number][] = Array.from({ length: 5 }, (_, i) => [i, 4 - i]);
+		const diagAnti: [number, number][] = Array.from({ length: gridSize }, (_, i) => [i, gridSize - 1 - i]);
 		if (diagAnti.every(([r, c]) => markedSet.has(`${r},${c}`)) && !displaySweptLines.includes('diag-anti')) {
 			lines.push({ id: 'diag-anti', cells: diagAnti });
 		}
@@ -144,13 +149,24 @@
 	const lineOverlays = $derived.by(() => {
 		const overlays: { cells: [number, number][] }[] = [];
 		for (const lineId of displaySweptLines) {
-			const cells = getLineCells(lineId) as [number, number][];
-			if (cells.length === 5) overlays.push({ cells });
+			const cells = getLineCells(lineId, gridSize) as [number, number][];
+			if (cells.length === gridSize) overlays.push({ cells });
 		}
 		return overlays;
 	});
 
-	const canCallBingo = $derived(points >= 5);
+	// BINGO button enabled when all letters are cut
+	const canCallBingo = $derived(cutLetters.size === gridSize);
+
+	function toggleCutLetter(index: number) {
+		const next = new Set(cutLetters);
+		if (next.has(index)) {
+			next.delete(index);
+		} else {
+			next.add(index);
+		}
+		cutLetters = next;
+	}
 
 	// Compute cell center positions relative to the SVG container
 	function cellCenter(r: number, c: number): { x: number; y: number } {
@@ -225,12 +241,17 @@
 
 	// --- Bingo call (turn-locked) ---
 	async function handleBingo() {
+		if (points < gridSize) {
+			showToast(`Need ${gridSize} points to call Bingo (you have ${points})`, 'error');
+			return;
+		}
 		try {
 			await callBingo({ roomId, playerId });
 		} catch (e: unknown) {
 			showToast(getErrorMessage(e, 'Failed to call Bingo'));
 		}
 	}
+
 	// Cached container ref for drag detection
 	let boardContainer = $state<HTMLElement | null>(null);
 
@@ -246,7 +267,7 @@
 		const y = clientY - rect.top - PADDING - HEADER_H;
 		const col = Math.floor(x / (CELL + GAP));
 		const row = Math.floor(y / (CELL + GAP));
-		if (row < 0 || row > 4 || col < 0 || col > 4) return null;
+		if (row < 0 || row >= gridSize || col < 0 || col >= gridSize) return null;
 		return [row, col];
 	}
 </script>
@@ -276,21 +297,17 @@
 		timeLeft={turnTimeLeft}
 	/>
 
-	<div class="flex items-center gap-3">
-		<div class="flex gap-1">
-			{#each Array(5) as _, i (i)}
-				<span class="text-xl transition-all duration-300" class:text-[#e8a838]={i < points} class:text-[#d5cec4]={i >= points}>★</span>
-			{/each}
-		</div>
-		{#if canCallBingo}
-			<span class="text-xs font-bold text-white bg-amber-400 px-2 py-0.5 rounded-full">READY!</span>
-		{/if}
-	</div>
+	{#if canCallBingo}
+		<span class="text-xs font-bold text-white bg-amber-400 px-2 py-0.5 rounded-full">READY!</span>
+	{/if}
 
 	<!-- Board with SVG overlay -->
 	<div class="card relative p-4 sm:p-6" data-board-container>
 		<Board
 			{grid}
+			{winWord}
+			{cutLetters}
+			onCutLetter={toggleCutLetter}
 			marked={displayMarked}
 			calledNumbers={allCalledNumbers}
 			disabled={!isMyTurn || turnTimeLeft <= 0}
@@ -304,7 +321,7 @@
 			<!-- Permanent swept lines with white outline for contrast -->
 			{#each lineOverlays as overlay}
 				{@const first = cellCenter(overlay.cells[0][0], overlay.cells[0][1])}
-				{@const last = cellCenter(overlay.cells[4][0], overlay.cells[4][1])}
+				{@const last = cellCenter(overlay.cells[gridSize - 1][0], overlay.cells[gridSize - 1][1])}
 				<!-- White outline -->
 				<line
 					x1={first.x} y1={first.y} x2={last.x} y2={last.y}

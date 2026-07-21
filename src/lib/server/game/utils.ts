@@ -12,14 +12,19 @@ export function generateRoomCode(): string {
 	return code;
 }
 
-export function createDefaultGrid(): number[][] {
-	const nums = Array.from({ length: 25 }, (_, i) => i + 1);
+export function createDefaultGrid(gridSize: number = 5): number[][] {
+	const total = gridSize * gridSize;
+	const nums = Array.from({ length: total }, (_, i) => i + 1);
 	shuffle(nums);
 	const grid: number[][] = [];
-	for (let r = 0; r < 5; r++) {
-		grid.push(nums.slice(r * 5, r * 5 + 5));
+	for (let r = 0; r < gridSize; r++) {
+		grid.push(nums.slice(r * gridSize, r * gridSize + gridSize));
 	}
 	return grid;
+}
+
+export function generateWinWord(gridSize: number): string {
+	return 'BINGO' + 'O'.repeat(gridSize - 5);
 }
 
 export function shuffle(arr: number[]): void {

@@ -1,21 +1,24 @@
 <script lang="ts">
 	import Cell from './Cell.svelte';
 
-	const BINGO_LETTERS = ['B', 'I', 'N', 'G', 'O'];
 	const LETTER_COLORS = ['#e07850', '#e8a838', '#7cb87a', '#6a9ecf', '#b07cc6'];
 
 	let {
-		grid, marked = [], calledNumbers = [], disabled = false, editMode = false,
-		onGridChange, onCellClick,
+		grid, winWord = 'BINGO', cutLetters = new Set(), marked = [], calledNumbers = [], disabled = false, editMode = false,
+		onGridChange, onCellClick, onCutLetter,
 		onDragStart: onSweepDragStart, onDragMove: onSweepDragMove
 	}: {
-		grid: number[][]; marked?: [number, number][]; calledNumbers?: number[];
+		grid: number[][]; winWord?: string; cutLetters?: Set<number>; marked?: [number, number][]; calledNumbers?: number[];
 		disabled?: boolean; editMode?: boolean;
 		onGridChange?: (newGrid: number[][]) => void;
 		onCellClick?: (row: number, col: number) => void;
+		onCutLetter?: (index: number) => void;
 		onDragStart?: (row: number, col: number) => void;
 		onDragMove?: (row: number, col: number) => void;
 	} = $props();
+
+	const letters = $derived(winWord.split(''));
+	const gridSize = $derived(letters.length);
 
 	let dragSource: [number, number] | null = $state(null);
 	const markedSet = $derived(new Set(marked.map(([r, c]) => `${r},${c}`)));
@@ -26,7 +29,7 @@
 	function handleValueChange(r: number, c: number, newVal: number) {
 		if (!onGridChange) return;
 		const g = grid.map((row) => [...row]);
-		for (let rr = 0; rr < 5; rr++) for (let cc = 0; cc < 5; cc++) {
+		for (let rr = 0; rr < gridSize; rr++) for (let cc = 0; cc < gridSize; cc++) {
 			if (g[rr][cc] === newVal && (rr !== r || cc !== c)) { g[rr][cc] = grid[r][c]; g[r][c] = newVal; onGridChange(g); return; }
 		}
 		g[r][c] = newVal; onGridChange(g);
@@ -44,21 +47,25 @@
 </script>
 
 <div class="flex flex-col items-center gap-1.5 sm:gap-2">
+	<!-- Clickable letter headers -->
 	<div class="flex gap-1.5 sm:gap-2 mb-1">
-		{#each BINGO_LETTERS as letter, i (i)}
-			<div class="h-10 w-14 sm:h-12 sm:w-16 flex items-center justify-center rounded-[10px] text-lg sm:text-xl text-white"
-				style="background: {LETTER_COLORS[i]}; box-shadow: 0 3px 0 rgba(0,0,0,0.2); text-shadow: 0 1px 0 rgba(0,0,0,0.15);">
+		{#each letters as letter, i (i)}
+			<button
+				type="button"
+				onclick={() => onCutLetter?.(i)}
+				class="h-10 w-14 sm:h-12 sm:w-16 flex items-center justify-center rounded-[10px] text-lg sm:text-xl text-white transition-all duration-200 select-none"
+				style="background: {LETTER_COLORS[i % LETTER_COLORS.length]}; box-shadow: 0 3px 0 rgba(0,0,0,0.2); text-shadow: 0 1px 0 rgba(0,0,0,0.15);"
+				class:opacity-40={cutLetters.has(i)}
+				class:line-through={cutLetters.has(i)}
+			>
 				{letter}
-			</div>
+			</button>
 		{/each}
 	</div>
 
+	<!-- Grid rows (no left-side labels) -->
 	{#each grid as gridRow, r (r)}
 		<div class="flex gap-1.5 sm:gap-2">
-			<div class="h-14 w-6 sm:h-16 sm:w-7 flex items-center justify-center rounded-[10px] text-sm sm:text-base text-white"
-				style="background: {LETTER_COLORS[r]}; box-shadow: 0 3px 0 rgba(0,0,0,0.2); text-shadow: 0 1px 0 rgba(0,0,0,0.15);">
-				{BINGO_LETTERS[r]}
-			</div>
 			{#each gridRow as cell, c (c)}
 				<Cell value={cell} {r} {c} {disabled} marked={isMarked(r, c)}
 					isCalled={calledSet.has(cell)}

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { players } from '$lib/server/db/schema';
-	let { players: playerList, maxPlayers, isHost, onStartGame }: {
-		players: typeof players.$inferSelect[]; maxPlayers: number; isHost: boolean; onStartGame: () => void;
+	let { players: playerList, maxPlayers, winWord = 'BINGO', gridSize = 5, isHost, onStartGame }: {
+		players: typeof players.$inferSelect[]; maxPlayers: number; winWord?: string; gridSize?: number; isHost: boolean; onStartGame: () => void;
 	} = $props();
 	let starting = $state(false);
 	let slotsLeft = $derived(maxPlayers - playerList.length);
@@ -17,6 +17,13 @@
 			<span class="font-bold text-[#3d3428]">{playerList.length}</span>/{maxPlayers} joined
 			{#if slotsLeft > 0}<span class="text-[#aaa298]"> — {slotsLeft} slot{slotsLeft > 1 ? 's' : ''} left</span>{/if}
 		</p>
+	</div>
+	<div class="card flex items-center gap-3 px-4 py-2 text-sm text-[#7a6e60]">
+		<span>Win word: <span class="font-bold text-[#3d3428]">{winWord}</span></span>
+		<span class="text-[#d5cec4]">•</span>
+		<span>Grid: <span class="font-bold text-[#3d3428]">{gridSize}×{gridSize}</span></span>
+		<span class="text-[#d5cec4]">•</span>
+		<span>Win at: <span class="font-bold text-[#3d3428]">{gridSize} points</span></span>
 	</div>
 	<div class="flex flex-col gap-3 w-full max-w-xs">
 		{#each playerList as player (player.id)}

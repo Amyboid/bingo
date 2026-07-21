@@ -30,7 +30,16 @@ async function migrate() {
 
 		console.log(`  ${file} (${statements.length} statements)`);
 		for (const stmt of statements) {
-			await sql.query(stmt);
+			try {
+				await sql.query(stmt);
+			} catch (e: any) {
+				// Skip "already exists" errors — safe to ignore on re-runs
+				if (e?.code === '42710' || e?.code === '42P07' || e?.message?.includes('already exists')) {
+					console.log(`    skipped (already exists)`);
+				} else {
+					throw e;
+				}
+			}
 		}
 	}
 

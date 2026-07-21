@@ -7,13 +7,30 @@
 	let mode: 'create' | 'join' = $state('create');
 	let displayName = $state('');
 	let maxPlayers = $state(5);
+	let gridSize = $state(5);
+	let setupTimeLimit = $state(30);
 	let roomCode = $state('');
 	let loading = $state(false);
+
+	const SETUP_TIME_OPTIONS = [
+		{ value: 10, label: '10 seconds' },
+		{ value: 15, label: '15 seconds' },
+		{ value: 20, label: '20 seconds' },
+		{ value: 30, label: '30 seconds (default)' },
+		{ value: 45, label: '45 seconds' },
+		{ value: 60, label: '1 minute' },
+		{ value: 90, label: '1.5 minutes' },
+		{ value: 120, label: '2 minutes' }
+	];
+
+	function getWinWord(size: number): string {
+		return 'BINGO' + 'O'.repeat(size - 5);
+	}
 
 	async function handleCreate() {
 		loading = true;
 		try {
-			const result = await createRoom({ displayName, maxPlayers });
+			const result = await createRoom({ displayName, maxPlayers, gridSize, setupTimeLimit });
 			localStorage.setItem(`bingo:player:${result.code}`, result.playerId);
 			goto(resolve('/room/[code]', { code: result.code }));
 		} catch (e: unknown) {
@@ -75,6 +92,22 @@
 					<select id="create-players" bind:value={maxPlayers} class="input">
 						{#each [2, 3, 4, 5] as n (n)}
 							<option value={n}>{n} players</option>
+						{/each}
+					</select>
+				</div>
+				<div>
+					<label for="create-grid" class="mb-1.5 block text-xs font-semibold text-[#7a6e60] uppercase tracking-wider">Letter Count</label>
+					<select id="create-grid" bind:value={gridSize} class="input">
+						{#each [5, 6, 7, 8, 9, 10] as n (n)}
+							<option value={n}>{n} — {getWinWord(n)} ({n}×{n} grid, {n} points to win)</option>
+						{/each}
+					</select>
+				</div>
+				<div>
+					<label for="create-setup" class="mb-1.5 block text-xs font-semibold text-[#7a6e60] uppercase tracking-wider">Setup Time</label>
+					<select id="create-setup" bind:value={setupTimeLimit} class="input">
+						{#each SETUP_TIME_OPTIONS as opt (opt.value)}
+							<option value={opt.value}>{opt.label}</option>
 						{/each}
 					</select>
 				</div>

@@ -27,6 +27,8 @@ CREATE TABLE "rooms" (
 	"max_players" integer DEFAULT 5 NOT NULL,
 	"status" "room_status" DEFAULT 'waiting' NOT NULL,
 	"win_word" text DEFAULT 'BINGO' NOT NULL,
+	"grid_size" integer DEFAULT 5 NOT NULL,
+	"setup_time_limit" integer DEFAULT 30 NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "rooms_code_unique" UNIQUE("code")
 );

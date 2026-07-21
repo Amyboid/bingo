@@ -83,7 +83,8 @@
 
 	const winner = $derived.by(() => {
 		if (roomData?.room.status !== 'round_ended') return null;
-		const winnerBoard = roomData.boards.find((b) => b.points >= 5);
+		const gridSize = roomData.room.gridSize;
+		const winnerBoard = roomData.boards.find((b) => b.points >= gridSize);
 		if (!winnerBoard) return null;
 		const winnerPlayer = roomData.players.find((p) => p.id === winnerBoard.playerId);
 		return winnerPlayer
@@ -241,6 +242,8 @@
 			<Lobby
 				players={roomData.players}
 				maxPlayers={roomData.room.maxPlayers}
+				winWord={roomData.room.winWord}
+				gridSize={roomData.room.gridSize}
 				{isHost}
 				onStartGame={handleStartGame}
 			/>
@@ -249,6 +252,7 @@
 				roomId={roomData.room.id}
 				playerId={playerId!}
 				grid={myBoard.grid as number[][]}
+				winWord={roomData.room.winWord}
 				confirmed={myBoard.confirmed}
 				setupDeadline={roomData.round.setupDeadline}
 			/>
@@ -257,6 +261,7 @@
 				roomId={roomData.room.id}
 				playerId={playerId!}
 				grid={myBoard.grid as number[][]}
+				winWord={roomData.room.winWord}
 				marked={(myBoard.marked as [number, number][]) ?? []}
 				points={myBoard.points}
 				sweptLines={(myBoard.sweptLines as string[]) ?? []}
@@ -281,7 +286,7 @@
 								<span class="text-sm font-semibold text-[#3d3428]">{player.displayName}</span>
 							</div>
 							<div class="flex items-center gap-0.5">
-								{#each Array(5) as _, j (j)}<span class="text-xs" class:text-[#e8a838]={j < player.points} class:text-[#d5cec4]={j >= player.points}>★</span>{/each}
+								{#each Array(roomData?.room.gridSize ?? 5) as _, j (j)}<span class="text-xs" class:text-[#e8a838]={j < player.points} class:text-[#d5cec4]={j >= player.points}>★</span>{/each}
 							</div>
 						</div>
 					{/each}
@@ -305,6 +310,7 @@
 	<WinOverlay
 		winnerName={winner.name}
 		points={winner.points}
+		winWord={roomData?.room.winWord}
 		allPlayers={playerScores}
 		{isHost}
 		onPlayAgain={handleStartGame}

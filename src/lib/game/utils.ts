@@ -1,9 +1,9 @@
 // Shared game utilities — safe for both client and server
 
-// Line identifiers: "row-0".."row-4", "col-0".."col-4", "diag-main", "diag-anti"
-export function getAllLineIds(): string[] {
+// Line identifiers: "row-0".."row-(N-1)", "col-0".."col-(N-1)", "diag-main", "diag-anti"
+export function getAllLineIds(gridSize: number = 5): string[] {
 	const lines: string[] = [];
-	for (let i = 0; i < 5; i++) {
+	for (let i = 0; i < gridSize; i++) {
 		lines.push(`row-${i}`);
 		lines.push(`col-${i}`);
 	}
@@ -11,37 +11,38 @@ export function getAllLineIds(): string[] {
 	return lines;
 }
 
-export function getLineCells(lineId: string): [number, number][] {
+export function getLineCells(lineId: string, gridSize: number = 5): [number, number][] {
 	if (lineId.startsWith('row-')) {
 		const r = parseInt(lineId.split('-')[1]);
-		return Array.from({ length: 5 }, (_, c) => [r, c]);
+		return Array.from({ length: gridSize }, (_, c) => [r, c]);
 	}
 	if (lineId.startsWith('col-')) {
 		const c = parseInt(lineId.split('-')[1]);
-		return Array.from({ length: 5 }, (_, r) => [r, c]);
+		return Array.from({ length: gridSize }, (_, r) => [r, c]);
 	}
 	if (lineId === 'diag-main') {
-		return Array.from({ length: 5 }, (_, i) => [i, i]);
+		return Array.from({ length: gridSize }, (_, i) => [i, i]);
 	}
 	if (lineId === 'diag-anti') {
-		return Array.from({ length: 5 }, (_, i) => [i, 4 - i]);
+		return Array.from({ length: gridSize }, (_, i) => [i, gridSize - 1 - i]);
 	}
 	return [];
 }
 
-export function isLineComplete(lineId: string, marked: [number, number][]): boolean {
-	const cells = getLineCells(lineId);
+export function isLineComplete(lineId: string, marked: [number, number][], gridSize: number = 5): boolean {
+	const cells = getLineCells(lineId, gridSize);
 	const markedSet = new Set(marked.map(([r, c]) => `${r},${c}`));
 	return cells.every(([r, c]) => markedSet.has(`${r},${c}`));
 }
 
 export function getCompletableLines(
 	marked: [number, number][],
-	sweptLines: string[]
+	sweptLines: string[],
+	gridSize: number = 5
 ): string[] {
 	const sweptSet = new Set(sweptLines);
-	return getAllLineIds().filter(
-		(id) => !sweptSet.has(id) && isLineComplete(id, marked)
+	return getAllLineIds(gridSize).filter(
+		(id) => !sweptSet.has(id) && isLineComplete(id, marked, gridSize)
 	);
 }
 

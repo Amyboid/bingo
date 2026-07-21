@@ -1,5 +1,5 @@
 {
-  "id": "8ac956c6-43f0-473b-8309-135bcacb1d54",
+  "id": "20ad4f09-8e4d-4e24-839b-fb71440fc229",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -253,6 +253,20 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'BINGO'"
+        },
+        "grid_size": {
+          "name": "grid_size",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 5
+        },
+        "setup_time_limit": {
+          "name": "setup_time_limit",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 30
         },
         "created_at": {
           "name": "created_at",

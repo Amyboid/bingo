@@ -122,7 +122,7 @@ export const startGame = command(
 				roomId,
 				roundNumber: 1,
 				status: 'setup',
-				setupDeadline: new Date(Date.now() + 30_000)
+				setupDeadline: new Date(Date.now() + room.setupTimeLimit * 1000)
 			})
 			.returning();
 
@@ -130,7 +130,7 @@ export const startGame = command(
 			await db.insert(playerBoards).values({
 				roundId: round.id,
 				playerId: player.id,
-				grid: createDefaultGrid(),
+				grid: createDefaultGrid(room.gridSize),
 				marked: [],
 				sweptLines: [],
 				points: 0,
@@ -165,9 +165,15 @@ export const callNumber = command(
 	v.object({
 		roomId: v.string(),
 		playerId: v.string(),
-		number: v.pipe(v.number(), v.minValue(1), v.maxValue(25))
+		number: v.pipe(v.number(), v.minValue(1))
 	}),
 	async ({ roomId, playerId, number }) => {
+		const [room] = await db.select().from(rooms).where(eq(rooms.id, roomId));
+		if (!room) error(400,'Room not found');
+
+		const maxNumber = room.gridSize * room.gridSize;
+		if (number > maxNumber) error(400,`Number must be between 1 and ${maxNumber}`);
+
 		const [round] = await db
 			.select()
 			.from(rounds)
@@ -230,6 +236,9 @@ export const sweepLine = command(
 		lineIds: v.array(v.string())
 	}),
 	async ({ roomId, playerId, lineIds }) => {
+		const [room] = await db.select().from(rooms).where(eq(rooms.id, roomId));
+		if (!room) error(400,'Room not found');
+
 		const [round] = await db
 			.select()
 			.from(rounds)
@@ -251,7 +260,7 @@ export const sweepLine = command(
 		for (const lineId of lineIds) {
 			if (sweptLines.includes(lineId)) continue;
 
-			const cells = getLineCells(lineId);
+			const cells = getLineCells(lineId, room.gridSize);
 			const markedSet = new Set(marked.map(([r, c]) => `${r},${c}`));
 			const complete = cells.every(([r, c]) => markedSet.has(`${r},${c}`));
 			if (!complete) continue;
@@ -280,6 +289,9 @@ export const callBingo = command(
 		playerId: v.string()
 	}),
 	async ({ roomId, playerId }) => {
+		const [room] = await db.select().from(rooms).where(eq(rooms.id, roomId));
+		if (!room) error(400,'Room not found');
+
 		const [round] = await db
 			.select()
 			.from(rounds)
@@ -298,8 +310,8 @@ export const callBingo = command(
 			.limit(1);
 		if (!board) error(400,'Board not found');
 
-		if (board.points < 5) {
-			error(400,`Need 5 points to call Bingo (you have ${board.points})`);
+		if (board.points < room.gridSize) {
+			error(400,`Need ${room.gridSize} points to call Bingo (you have ${board.points})`);
 		}
 
 		// Winner! End the round

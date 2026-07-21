@@ -4,7 +4,7 @@ import * as v from 'valibot';
 import { db } from '$lib/server/db';
 import { rooms, players, rounds, playerBoards } from '$lib/server/db/schema';
 import { eq, and, or, desc, lt, count } from 'drizzle-orm';
-import { generateRoomCode } from '$lib/server/game/utils';
+import { generateRoomCode, generateWinWord } from '$lib/server/game/utils';
 
 async function runCleanup() {
 	const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -70,14 +70,17 @@ export const getRoomState = query(v.string(), async (roomCode) => {
 export const createRoom = command(
 	v.object({
 		displayName: v.pipe(v.string(), v.minLength(1, 'Name is required'), v.maxLength(20)),
-		maxPlayers: v.pipe(v.number(), v.minValue(2), v.maxValue(5))
+		maxPlayers: v.pipe(v.number(), v.minValue(2), v.maxValue(5)),
+		gridSize: v.optional(v.pipe(v.number(), v.minValue(5), v.maxValue(10)), 5),
+		setupTimeLimit: v.optional(v.pipe(v.number(), v.minValue(10), v.maxValue(120)), 30)
 	}),
-	async ({ displayName, maxPlayers }) => {
+	async ({ displayName, maxPlayers, gridSize, setupTimeLimit }) => {
 		const code = generateRoomCode();
 		const tempHostId = crypto.randomUUID();
+		const winWord = generateWinWord(gridSize);
 		const [room] = await db
 			.insert(rooms)
-			.values({ code, maxPlayers, hostId: tempHostId })
+			.values({ code, maxPlayers, hostId: tempHostId, winWord, gridSize, setupTimeLimit })
 			.returning();
 
 		const [player] = await db

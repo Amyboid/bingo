@@ -13,6 +13,8 @@ export const rooms = pgTable(
 		maxPlayers: integer('max_players').notNull().default(5),
 		status: roomStatusEnum('status').notNull().default('waiting'),
 		winWord: text('win_word').notNull().default('BINGO'),
+		gridSize: integer('grid_size').notNull().default(5),
+		setupTimeLimit: integer('setup_time_limit').notNull().default(30),
 		createdAt: timestamp('created_at').notNull().defaultNow()
 	},
 	(table) => [index('rooms_code_idx').on(table.code)]

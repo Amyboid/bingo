@@ -6,12 +6,14 @@
 		roomId,
 		playerId,
 		grid: serverGrid,
+		winWord = 'BINGO',
 		confirmed,
 		setupDeadline
 	}: {
 		roomId: string;
 		playerId: string;
 		grid: number[][];
+		winWord?: string;
 		confirmed: boolean;
 		setupDeadline: string | Date | null;
 	} = $props();
@@ -86,6 +88,7 @@
 	<div class="card p-4 sm:p-6">
 		<Board
 			{grid}
+			{winWord}
 			editMode={!confirmed}
 			disabled={confirmed || timeLeft === 0}
 			onGridChange={confirmed ? undefined : handleGridChange}

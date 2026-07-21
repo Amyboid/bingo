@@ -35,7 +35,8 @@ export async function markNumberOnAllBoards(
 }
 
 export async function getCompletableLinesForBoard(
-	boardId: string
+	boardId: string,
+	gridSize: number = 5
 ): Promise<string[]> {
 	const [board] = await db
 		.select()
@@ -48,16 +49,18 @@ export async function getCompletableLinesForBoard(
 	const marked = (board.marked as [number, number][]) ?? [];
 	const sweptLines = (board.sweptLines as string[]) ?? [];
 
-	return getCompletableLines(marked, sweptLines);
+	return getCompletableLines(marked, sweptLines, gridSize);
 }
 
 export function validateCallNumber(
 	grid: number[][],
 	number: number,
-	calledNumbers: number[]
+	calledNumbers: number[],
+	gridSize: number = 5
 ): { valid: boolean; error?: string } {
-	if (number < 1 || number > 25) {
-		return { valid: false, error: 'Number must be between 1 and 25' };
+	const maxNumber = gridSize * gridSize;
+	if (number < 1 || number > maxNumber) {
+		return { valid: false, error: `Number must be between 1 and ${maxNumber}` };
 	}
 	if (calledNumbers.includes(number)) {
 		return { valid: false, error: 'Number already called' };
@@ -75,13 +78,14 @@ export function validateCallNumber(
 export function validateSweepLine(
 	sweptLines: string[],
 	lineId: string,
-	marked: [number, number][]
+	marked: [number, number][],
+	gridSize: number = 5
 ): { valid: boolean; error?: string } {
 	if (sweptLines.includes(lineId)) {
 		return { valid: false, error: 'Line already swept' };
 	}
 
-	const cells = getLineCells(lineId);
+	const cells = getLineCells(lineId, gridSize);
 	const markedSet = new Set(marked.map(([r, c]) => `${r},${c}`));
 	const allMarked = cells.every(([r, c]) => markedSet.has(`${r},${c}`));
 
