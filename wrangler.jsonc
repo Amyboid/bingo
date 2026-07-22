@@ -1,6 +1,6 @@
 {
 	"$schema": "./node_modules/wrangler/config-schema.json",
-	"name": "bingo-3sam",
+	"name": "bingo",
 	"compatibility_date": "2026-07-15",
 	"compatibility_flags": [
 		"nodejs_als"
