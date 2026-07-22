@@ -9,6 +9,7 @@
 	import SetupPhase from '$lib/components/SetupPhase.svelte';
 	import PlayPhase from '$lib/components/PlayPhase.svelte';
 	import WinOverlay from '$lib/components/WinOverlay.svelte';
+	import RulesModal from '$lib/components/RulesModal.svelte';
 	import { showToast, getErrorMessage } from '$lib/toast';
 	import type { RoomState } from '$lib/game/types';
 
@@ -52,6 +53,7 @@
 	let rejoinLoading = $state(false);
 	let previousHostId = $state<string | null>(null);
 	let startingGame = $state(false);
+	let showRules = $state(false);
 	let windowWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 1024);
 
 	$effect(() => {
@@ -246,14 +248,19 @@
 				<p class="text-text-light text-sm">Loading...</p>
 			</div>
 		{:else if roomData?.room.status === 'waiting'}
-			<Lobby
-				players={roomData.players}
-				maxPlayers={roomData.room.maxPlayers}
-				winWord={roomData.room.winWord}
-				gridSize={roomData.room.gridSize}
-				{isHost}
-				onStartGame={handleStartGame}
-			/>
+			<div class="flex flex-col items-center gap-3">
+				<Lobby
+					players={roomData.players}
+					maxPlayers={roomData.room.maxPlayers}
+					winWord={roomData.room.winWord}
+					gridSize={roomData.room.gridSize}
+					{isHost}
+					onStartGame={handleStartGame}
+				/>
+				<button onclick={() => showRules = true} class="btn-curve bg-gray text-xs px-3 py-1">
+					How to Play
+				</button>
+			</div>
 		{:else if roomData?.round?.status === 'setup' && myBoard}
 			<SetupPhase
 				roomId={roomData.room.id}
@@ -285,6 +292,12 @@
 					class="fixed bottom-2 right-2 z-40 btn-curve bg-secondary text-[10px] px-3 py-1"
 				>
 					Leave
+				</button>
+				<button
+					onclick={() => showRules = true}
+					class="fixed bottom-2 left-2 z-40 btn-curve bg-gray text-[10px] px-3 py-1"
+				>
+					?
 				</button>
 			{/if}
 		{:else if roomData?.room.status === 'round_ended' && !winner && !startingGame}
@@ -388,3 +401,5 @@
 		</div>
 	</div>
 {/if}
+
+<RulesModal open={showRules} onClose={() => showRules = false} />
