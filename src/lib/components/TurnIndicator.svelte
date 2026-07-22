@@ -4,7 +4,7 @@
 	} = $props();
 </script>
 
-<div class="card flex items-center gap-3 sm:gap-4 px-4 sm:px-6 py-3">
+<div class="flex items-center gap-2 sm:gap-4 px-3 sm:px-6 py-2 sm:py-3 bg-white/90 sm:bg-card rounded-xl sm:rounded-2xl shadow-sm sm:shadow-md">
 	<div class="flex items-center gap-2">
 		<div class="h-3.5 w-3.5 rounded-full {isMyTurn ? 'bg-primary shadow-[0_0_8px_rgba(232,168,56,0.5)]' : 'bg-light-gray'}"></div>
 		<div class="flex flex-col">

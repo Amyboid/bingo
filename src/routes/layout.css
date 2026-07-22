@@ -115,6 +115,12 @@
 	}
 	input[type='number'] { -moz-appearance: textfield; }
 
+	@media (max-width: 640px) {
+		html {
+			overscroll-behavior: none;
+		}
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		*, *::before, *::after {
 			animation-duration: 0.01ms !important;

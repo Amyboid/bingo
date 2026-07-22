@@ -1,13 +1,13 @@
 <script lang="ts">
 	let {
 		value, r, c, disabled = false, marked = false, isCalled = false,
-		canInteract = false, draggable = false,
+		canInteract = false, draggable = false, cellSize = 56,
 		onValueChange, onClick, onDragStart, onDrop,
 		onSweepDragStart, onSweepDragMove
 	}: {
 		value: number; r: number; c: number;
 		disabled?: boolean; marked?: boolean; isCalled?: boolean;
-		canInteract?: boolean; draggable?: boolean;
+		canInteract?: boolean; draggable?: boolean; cellSize?: number;
 		onValueChange?: (val: number) => void;
 		onClick?: (row: number, col: number) => void;
 		onDragStart?: (row: number, col: number) => void;
@@ -66,7 +66,7 @@
 	});
 
 	const cellClass = $derived.by(() => {
-		const base = 'relative flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-[10px] text-xl sm:text-2xl transition-all duration-100 select-none cursor-default ';
+		const base = `relative flex items-center justify-center rounded-[10px] transition-all duration-100 select-none cursor-default `;
 		if (editing) return base + 'tile ring-2 ring-[#e8a838]';
 		if (isCalled) return base + 'tile tile-called ' + (justMarked ? 'animate-tile-bounce' : '');
 		if (marked) return base + 'tile tile-marked cursor-grab ' + (justMarked ? 'animate-tile-bounce' : '');
@@ -78,6 +78,7 @@
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div class={cellClass} data-row={r} data-col={c} aria-label={ariaLabel}
+	style="width: {cellSize}px; height: {cellSize}px; font-size: {Math.max(14, Math.round(cellSize * 0.32))}px;"
 	draggable={draggable && canInteract && !disabled}
 	ondragstart={draggable ? handleEditDragStartInternal : undefined}
 	ondragover={(e) => e.preventDefault()}
@@ -88,13 +89,14 @@
 	{#if editing}
 		<input bind:this={inputEl} type="number" min="1" max="25" bind:value={editValue}
 			onblur={commitEdit} onkeydown={handleKeydown}
-			class="absolute inset-0 w-full h-full rounded-[10px] bg-white text-center text-xl font-bold text-text outline-none border-2 border-primary" />
+			class="absolute inset-0 w-full h-full rounded-[10px] bg-white text-center font-bold text-text outline-none border-2 border-primary"
+			style="font-size: {Math.max(14, Math.round(cellSize * 0.32))}px;" />
 	{:else}
 		{value}
 	{/if}
 	{#if marked && !isCalled}
 		<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-			<svg class="w-7 h-7 sm:w-8 sm:h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round">
+			<svg style="width: {Math.round(cellSize * 0.45)}px; height: {Math.round(cellSize * 0.45)}px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round">
 				<line x1="7" y1="7" x2="17" y2="17" class="text-white" />
 				<line x1="17" y1="7" x2="7" y2="17" class="text-white" />
 			</svg>

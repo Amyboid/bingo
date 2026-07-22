@@ -22,6 +22,23 @@
 	let saving = $state(false);
 	let timeLeft = $state(30);
 
+	// Responsive cell sizing (same as PlayPhase)
+	let windowWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 1024);
+
+	$effect(() => {
+		const onResize = () => { windowWidth = window.innerWidth; };
+		window.addEventListener('resize', onResize);
+		return () => window.removeEventListener('resize', onResize);
+	});
+
+	const gridSize = $derived(winWord.length);
+	const isSmall = $derived(windowWidth >= 640);
+	const GAP = $derived(isSmall ? 8 : 6);
+	const PADDING = $derived(isSmall ? 24 : 16);
+	const maxBoardWidth = $derived(windowWidth - PADDING * 2 - 32);
+	const maxCell = $derived(Math.floor((maxBoardWidth - (gridSize - 1) * GAP) / gridSize));
+	const CELL = $derived(Math.min(isSmall ? 64 : 56, Math.max(maxCell, 28)));
+
 	// Sync grid from server when not saving
 	$effect(() => {
 		if (!saving) {
@@ -85,10 +102,11 @@
 		{/if}
 	</div>
 
-	<div class="card p-4 sm:p-6">
+	<div class="card p-4 sm:p-6 overflow-hidden max-w-full">
 		<Board
 			{grid}
 			{winWord}
+			cellSize={CELL}
 			editMode={!confirmed}
 			disabled={confirmed || timeLeft === 0}
 			onGridChange={confirmed ? undefined : handleGridChange}

@@ -5,11 +5,12 @@
 
 	let {
 		grid, winWord = 'BINGO', cutLetters = new Set(), marked = [], calledNumbers = [], disabled = false, editMode = false,
+		cellSize = 56,
 		onGridChange, onCellClick, onCutLetter,
 		onDragStart: onSweepDragStart, onDragMove: onSweepDragMove
 	}: {
 		grid: number[][]; winWord?: string; cutLetters?: Set<number>; marked?: [number, number][]; calledNumbers?: number[];
-		disabled?: boolean; editMode?: boolean;
+		disabled?: boolean; editMode?: boolean; cellSize?: number;
 		onGridChange?: (newGrid: number[][]) => void;
 		onCellClick?: (row: number, col: number) => void;
 		onCutLetter?: (index: number) => void;
@@ -53,8 +54,8 @@
 			<button
 				type="button"
 				onclick={() => onCutLetter?.(i)}
-				class="h-10 w-14 sm:h-12 sm:w-16 flex items-center justify-center rounded-[10px] text-lg sm:text-xl text-white transition-all duration-200 select-none"
-				style="background: {LETTER_COLORS[i % LETTER_COLORS.length]}; box-shadow: 0 3px 0 rgba(0,0,0,0.2); text-shadow: 0 1px 0 rgba(0,0,0,0.15);"
+				class="flex items-center justify-center rounded-[10px] text-white transition-all duration-200 select-none"
+				style="width: {cellSize}px; height: {cellSize}px; font-size: {Math.max(14, Math.round(cellSize * 0.28))}px; background: {LETTER_COLORS[i % LETTER_COLORS.length]}; box-shadow: 0 3px 0 rgba(0,0,0,0.2); text-shadow: 0 1px 0 rgba(0,0,0,0.15);"
 				class:opacity-40={cutLetters.has(i)}
 				class:line-through={cutLetters.has(i)}
 			>
@@ -71,6 +72,7 @@
 					isCalled={calledSet.has(cell)}
 					canInteract={editMode || (!disabled && isMarked(r, c))}
 					draggable={editMode}
+					{cellSize}
 					onValueChange={(val: number) => handleValueChange(r, c, val)}
 					onClick={!editMode ? onCellClick : undefined}
 					onDragStart={editMode ? handleEditDragStart : undefined}

@@ -53,19 +53,27 @@
 
 	// Layout constants (responsive to match Tailwind sm: breakpoints)
 	let windowWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 1024);
+	let windowHeight = $state(typeof window !== 'undefined' ? window.innerHeight : 812);
 
 	$effect(() => {
-		const onResize = () => { windowWidth = window.innerWidth; boardContainer = null; };
+		const onResize = () => { windowWidth = window.innerWidth; windowHeight = window.innerHeight; };
 		window.addEventListener('resize', onResize);
 		return () => window.removeEventListener('resize', onResize);
 	});
 
 	const isSmall = $derived(windowWidth >= 640);
-	const CELL = $derived(isSmall ? 64 : 56);
 	const GAP = $derived(isSmall ? 8 : 6);
-	const LABEL_W = $derived(0); // No left-side labels anymore
+	const LABEL_W = $derived(0);
 	const HEADER_H = $derived(isSmall ? 48 : 40);
 	const PADDING = $derived(isSmall ? 24 : 16);
+
+	// Dynamic cell size: fit board within viewport (use smaller of width/height constraints)
+	const maxBoardWidth = $derived(windowWidth - PADDING * 2 - 32); // card padding
+	const maxBoardHeight = $derived(windowHeight - HEADER_H - 80 - PADDING * 2); // top bar + bottom btn + card padding
+	const maxCellFromWidth = $derived(Math.floor((maxBoardWidth - (gridSize - 1) * GAP) / gridSize));
+	const maxCellFromHeight = $derived(Math.floor((maxBoardHeight - (gridSize - 1) * GAP) / gridSize));
+	const maxCell = $derived(Math.min(maxCellFromWidth, maxCellFromHeight));
+	const CELL = $derived(Math.min(isSmall ? 64 : 56, Math.max(maxCell, 28)));
 
 	// 30s turn timer + auto-call
 	$effect(() => {
@@ -169,11 +177,34 @@
 	}
 
 	// Compute cell center positions relative to the SVG container
+	// Use runtime measurement to get the Board's actual position within the card
+	const actualHeaderH = $derived(CELL + 4 + GAP);
+
+	let boardRect = $state<{ left: number; top: number } | null>(null);
+
+	$effect(() => {
+		const container = document.querySelector('[data-board-container]');
+		const board = document.querySelector('[data-board]');
+		if (container && board) {
+			const cr = container.getBoundingClientRect();
+			const br = board.getBoundingClientRect();
+			boardRect = { left: br.left - cr.left, top: br.top - cr.top };
+		}
+	});
+
 	function cellCenter(r: number, c: number): { x: number; y: number } {
-		const x = PADDING + LABEL_W + c * (CELL + GAP) + CELL / 2;
-		const y = PADDING + HEADER_H + r * (CELL + GAP) + CELL / 2;
+		if (!boardRect) return { x: 0, y: 0 };
+		const cellStep = CELL + GAP;
+		const x = boardRect.left + c * cellStep + CELL / 2;
+		const y = boardRect.top + actualHeaderH + r * cellStep + CELL / 2;
 		return { x, y };
 	}
+
+	// Proportional line stroke widths (scale with cell size)
+	const LINE_OUTLINE = $derived(Math.round(CELL * 0.2));
+	const LINE_WIDTH = $derived(Math.round(CELL * 0.1));
+	const DRAG_OUTLINE = $derived(Math.round(CELL * 0.15));
+	const DRAG_WIDTH = $derived(Math.round(CELL * 0.08));
 
 	// --- Number calling (turn-locked) ---
 	function handleCellClick(row: number, col: number) {
@@ -204,7 +235,6 @@
 		if (!displayMarked.some(([r, c]) => r === row && c === col)) return;
 		isDragging = true;
 		dragCells = [[row, col]];
-		boardContainer = null; // Reset cache for fresh measurement
 	}
 
 	function handleDragMove(row: number, col: number) {
@@ -252,19 +282,15 @@
 		}
 	}
 
-	// Cached container ref for drag detection
-	let boardContainer = $state<HTMLElement | null>(null);
-
 	// Compute cell from any pointer coordinates (mouse or touch)
-	// Uses the same responsive variables as cellCenter for exact alignment
+	// Uses runtime measurement to match cellCenter exactly
 	function getCellFromPosition(clientX: number, clientY: number): [number, number] | null {
-		if (!boardContainer) {
-			boardContainer = document.querySelector('[data-board-container]');
-		}
-		if (!boardContainer) return null;
-		const rect = boardContainer.getBoundingClientRect();
-		const x = clientX - rect.left - PADDING - LABEL_W;
-		const y = clientY - rect.top - PADDING - HEADER_H;
+		if (!boardRect) return null;
+		const container = document.querySelector('[data-board-container]');
+		if (!container) return null;
+		const cr = container.getBoundingClientRect();
+		const x = clientX - cr.left - boardRect.left;
+		const y = clientY - cr.top - boardRect.top - actualHeaderH;
 		const col = Math.floor(x / (CELL + GAP));
 		const row = Math.floor(y / (CELL + GAP));
 		if (row < 0 || row >= gridSize || col < 0 || col >= gridSize) return null;
@@ -282,6 +308,7 @@
 	}}
 	ontouchmove={(e) => {
 		if (!isDragging) return;
+		e.preventDefault();
 		const touch = e.touches[0];
 		if (!touch) return;
 		const cell = getCellFromPosition(touch.clientX, touch.clientY);
@@ -289,48 +316,54 @@
 	}}
 />
 
-<div class="flex flex-col items-center gap-4">
-	<TurnIndicator
-		currentPlayerName={playerName}
-		{lastCalledNumber}
-		{isMyTurn}
-		timeLeft={turnTimeLeft}
-	/>
+<div class="flex flex-col items-center gap-2 sm:gap-4 h-full">
+	<!-- Compact top bar -->
+	<div class="w-full flex-shrink-0">
+		<TurnIndicator
+			currentPlayerName={playerName}
+			{lastCalledNumber}
+			{isMyTurn}
+			timeLeft={turnTimeLeft}
+		/>
+	</div>
 
 	{#if canCallBingo}
-		<span class="text-xs font-bold text-white bg-amber-400 px-2 py-0.5 rounded-full">READY!</span>
+		<span class="text-xs font-bold text-white bg-amber-400 px-2 py-0.5 rounded-full flex-shrink-0">READY!</span>
 	{/if}
 
-	<!-- Board with SVG overlay -->
-	<div class="card relative p-4 sm:p-6" data-board-container>
-		<Board
-			{grid}
-			{winWord}
-			{cutLetters}
-			onCutLetter={toggleCutLetter}
-			marked={displayMarked}
-			calledNumbers={allCalledNumbers}
-			disabled={!isMyTurn || turnTimeLeft <= 0}
-			onCellClick={handleCellClick}
-			onDragStart={handleDragStart}
-			onDragMove={handleDragMove}
-		/>
+	<!-- Board fills remaining height -->
+	<div class="card relative p-2 sm:p-6 overflow-hidden max-w-full flex-1 min-h-0 flex items-center justify-center" data-board-container>
+		<div data-board>
+			<Board
+				{grid}
+				{winWord}
+				{cutLetters}
+				cellSize={CELL}
+				onCutLetter={toggleCutLetter}
+				marked={displayMarked}
+				calledNumbers={allCalledNumbers}
+				disabled={!isMyTurn || turnTimeLeft <= 0}
+				onCellClick={handleCellClick}
+				onDragStart={handleDragStart}
+				onDragMove={handleDragMove}
+			/>
+		</div>
 
 		<!-- SVG overlays -->
 		<svg class="absolute inset-0 pointer-events-none" style="width: 100%; height: 100%;">
 			<!-- Permanent swept lines with white outline for contrast -->
-			{#each lineOverlays as overlay}
+			{#each lineOverlays as overlay, i (i)}
 				{@const first = cellCenter(overlay.cells[0][0], overlay.cells[0][1])}
 				{@const last = cellCenter(overlay.cells[gridSize - 1][0], overlay.cells[gridSize - 1][1])}
 				<!-- White outline -->
 				<line
 					x1={first.x} y1={first.y} x2={last.x} y2={last.y}
-					stroke="white" stroke-width="12" stroke-linecap="round" opacity="0.9"
+					stroke="white" stroke-width={LINE_OUTLINE} stroke-linecap="round" opacity="0.9"
 				/>
 				<!-- Coral line -->
 				<line
 					x1={first.x} y1={first.y} x2={last.x} y2={last.y}
-					stroke="#e07850" stroke-width="6" stroke-linecap="round" opacity="0.95"
+					stroke="#e07850" stroke-width={LINE_WIDTH} stroke-linecap="round" opacity="0.95"
 				/>
 			{/each}
 
@@ -342,7 +375,7 @@
 						const p = cellCenter(r, c);
 						return `${p.x},${p.y}`;
 					}).join(' ')}
-					stroke="white" stroke-width="8" stroke-linecap="round"
+					stroke="white" stroke-width={DRAG_OUTLINE} stroke-linecap="round"
 					stroke-linejoin="round" fill="none" opacity="0.7"
 				/>
 				<!-- Amber drag line -->
@@ -351,7 +384,7 @@
 						const p = cellCenter(r, c);
 						return `${p.x},${p.y}`;
 					}).join(' ')}
-					stroke="#e8a838" stroke-width="4" stroke-linecap="round"
+					stroke="#e8a838" stroke-width={DRAG_WIDTH} stroke-linecap="round"
 					stroke-linejoin="round" fill="none" opacity="0.9"
 				/>
 			{/if}
@@ -359,11 +392,13 @@
 	</div>
 
 	{#if canCallBingo && isMyTurn}
-		<button
-			onclick={handleBingo}
-			class="btn btn-coral btn-lg"
-		>
-			BINGO!
-		</button>
+		<div class="flex-shrink-0 w-full flex justify-center pb-2 sm:pb-0">
+			<button
+				onclick={handleBingo}
+				class="btn btn-coral btn-lg"
+			>
+				BINGO!
+			</button>
+		</div>
 	{/if}
 </div>

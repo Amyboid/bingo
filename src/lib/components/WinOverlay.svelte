@@ -18,13 +18,13 @@
 			<div class="absolute rounded-full" style="width: {8 + (i % 3) * 6}px; height: {8 + (i % 3) * 6}px; left: {5 + (i * 4.5)}%; top: -20px; background: {COLORS_RAW[i % COLORS_RAW.length]}; animation: confetti-fall {2 + (i % 3)}s linear {i * 0.12}s forwards;"></div>
 		{/each}
 	</div>
-	<div class="card flex flex-col items-center gap-6 sm:gap-8 p-8 sm:p-12 mx-4 max-w-md w-full relative animate-pop">
-		<div class="text-6xl sm:text-7xl text-secondary" style="text-shadow: 0 4px 0 rgba(0,0,0,0.12), 0 6px 12px rgba(0,0,0,0.08);">{winWord}!</div>
+	<div class="card flex flex-col items-center gap-6 sm:gap-8 p-6 sm:p-12 mx-4 max-w-md w-full relative animate-pop overflow-hidden">
+		<div class="text-3xl sm:text-5xl md:text-7xl text-secondary" style="text-shadow: 0 4px 0 rgba(0,0,0,0.12), 0 6px 12px rgba(0,0,0,0.08);">{winWord}!</div>
 		<div class="text-center">
 			<p class="text-xs text-muted uppercase tracking-widest">Winner</p>
 			<p class="text-2xl sm:text-3xl font-bold text-text mt-1">{winnerName}</p>
-			<div class="flex items-center justify-center gap-1 mt-2">
-				{#each Array(gridSize) as _, i (i)}<span class="text-xl" class:text-primary={i < points} class:text-border={i >= points}>★</span>{/each}
+			<div class="flex items-center justify-center gap-1 mt-2 flex-wrap">
+				{#each Array(gridSize) as _, i (i)}<span class="text-lg sm:text-xl" class:text-primary={i < points} class:text-border={i >= points}>★</span>{/each}
 			</div>
 		</div>
 		<div class="w-full rounded-xl bg-card p-4">
