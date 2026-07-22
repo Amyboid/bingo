@@ -164,8 +164,26 @@
 		return overlays;
 	});
 
-	// BINGO button enabled when all letters are cut
-	const canCallBingo = $derived(cutLetters.size === gridSize);
+	// Grace period: 5 seconds after turn ends
+	const turnEndedAt = $derived(isMyTurn ? 0 : (turnStartedAt ? new Date(turnStartedAt).getTime() + 30_000 : 0));
+	const graceTimeLeft = $derived(Math.max(0, 5 - Math.floor((Date.now() - turnEndedAt) / 1000)));
+	const inGracePeriod = $derived(!isMyTurn && graceTimeLeft > 0);
+
+	// Button disabled only when not in valid window (turn or grace period)
+	// Points check is server-side — player gets error toast if they don't have enough
+	const bingoDisabled = $derived(!isMyTurn && !inGracePeriod);
+
+	// Reactive timer for grace period countdown
+	let graceInterval = $state<ReturnType<typeof setInterval> | null>(null);
+	$effect(() => {
+		if (inGracePeriod && !graceInterval) {
+			graceInterval = setInterval(() => {}, 1000);
+		} else if (!inGracePeriod && graceInterval) {
+			clearInterval(graceInterval);
+			graceInterval = null;
+		}
+		return () => { if (graceInterval) clearInterval(graceInterval); };
+	});
 
 	function toggleCutLetter(index: number) {
 		const next = new Set(cutLetters);
@@ -270,12 +288,8 @@
 		}
 	}
 
-	// --- Bingo call (turn-locked) ---
+	// --- Bingo call (turn-locked + grace period) ---
 	async function handleBingo() {
-		if (points < gridSize) {
-			showToast(`Need ${gridSize} points to call Bingo (you have ${points})`, 'error');
-			return;
-		}
 		try {
 			await callBingo({ roomId, playerId });
 		} catch (e: unknown) {
@@ -325,12 +339,9 @@
 			{lastCalledNumber}
 			{isMyTurn}
 			timeLeft={turnTimeLeft}
+			{graceTimeLeft}
 		/>
 	</div>
-
-	{#if canCallBingo}
-		<span class="text-xs font-bold text-white bg-amber-400 px-2 py-0.5 rounded-full flex-shrink-0">READY!</span>
-	{/if}
 
 	<!-- Board sizes to content -->
 	<div class="card relative p-2 sm:p-6 overflow-hidden max-w-full" data-board-container>
@@ -392,14 +403,13 @@
 		</svg>
 	</div>
 
-	{#if canCallBingo && isMyTurn}
-		<div class="flex-shrink-0 w-full flex justify-center pb-2 sm:pb-0">
-			<button
-				onclick={handleBingo}
-				class="btn btn-coral btn-lg"
-			>
-				BINGO!
-			</button>
-		</div>
-	{/if}
+	<div class="flex-shrink-0 w-full flex justify-center pb-2 sm:pb-0">
+		<button
+			onclick={handleBingo}
+			disabled={bingoDisabled}
+			class="btn btn-coral btn-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+		>
+			BINGO!
+		</button>
+	</div>
 </div>

@@ -1,6 +1,6 @@
 <script lang="ts">
-	let { currentPlayerName, lastCalledNumber, isMyTurn, timeLeft }: {
-		currentPlayerName: string; lastCalledNumber: number | null; isMyTurn: boolean; timeLeft: number;
+	let { currentPlayerName, lastCalledNumber, isMyTurn, timeLeft, graceTimeLeft = 0 }: {
+		currentPlayerName: string; lastCalledNumber: number | null; isMyTurn: boolean; timeLeft: number; graceTimeLeft?: number;
 	} = $props();
 </script>
 
@@ -23,9 +23,17 @@
 
 	<div class="h-8 w-px bg-border"></div>
 	<div class="flex flex-col items-center">
-		<span class="text-[10px] sm:text-xs text-text-light uppercase tracking-wider">{isMyTurn ? 'Time' : 'Wait'}</span>
-		<span class="text-sm sm:text-text-light font-mono {timeLeft <= 10 ? 'text-secondary' : timeLeft <= 20 ? 'text-primary' : 'text-success'}">
-			{isMyTurn ? `${timeLeft}s` : '—'}
-		</span>
+		{#if isMyTurn}
+			<span class="text-[10px] sm:text-xs text-text-light uppercase tracking-wider">Time</span>
+			<span class="text-sm sm:text-text-light font-mono {timeLeft <= 10 ? 'text-secondary' : timeLeft <= 20 ? 'text-primary' : 'text-success'}">
+				{timeLeft}s
+			</span>
+		{:else if graceTimeLeft > 0}
+			<span class="text-[10px] sm:text-xs text-text-light uppercase tracking-wider">BINGO</span>
+			<span class="text-sm font-mono text-secondary">{graceTimeLeft}s</span>
+		{:else}
+			<span class="text-[10px] sm:text-xs text-text-light uppercase tracking-wider">Wait</span>
+			<span class="text-sm sm:text-text-light font-mono">—</span>
+		{/if}
 	</div>
 </div>
