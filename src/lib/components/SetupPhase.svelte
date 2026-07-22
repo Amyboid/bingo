@@ -35,7 +35,8 @@
 	const isSmall = $derived(windowWidth >= 640);
 	const GAP = $derived(isSmall ? 8 : 6);
 	const PADDING = $derived(isSmall ? 24 : 16);
-	const maxBoardWidth = $derived(windowWidth - PADDING * 2 - 32);
+	const sidebarW = $derived(windowWidth >= 768 ? 224 : 0);
+	const maxBoardWidth = $derived(windowWidth - sidebarW - PADDING * 2 - 32);
 	const maxCell = $derived(Math.floor((maxBoardWidth - (gridSize - 1) * GAP) / gridSize));
 	const CELL = $derived(Math.min(isSmall ? 64 : 56, Math.max(maxCell, 28)));
 

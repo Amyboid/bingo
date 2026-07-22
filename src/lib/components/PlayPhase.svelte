@@ -68,7 +68,8 @@
 	const PADDING = $derived(isSmall ? 24 : 16);
 
 	// Dynamic cell size: fit board within viewport (use smaller of width/height constraints)
-	const maxBoardWidth = $derived(windowWidth - PADDING * 2 - 32); // card padding
+	const sidebarW = $derived(windowWidth >= 768 ? 224 : 0); // md breakpoint = sidebar visible
+	const maxBoardWidth = $derived(windowWidth - sidebarW - PADDING * 2 - 32); // subtract sidebar + card padding
 	const maxBoardHeight = $derived(windowHeight - HEADER_H - 80 - PADDING * 2); // top bar + bottom btn + card padding
 	const maxCellFromWidth = $derived(Math.floor((maxBoardWidth - (gridSize - 1) * GAP) / gridSize));
 	const maxCellFromHeight = $derived(Math.floor((maxBoardHeight - (gridSize - 1) * GAP) / gridSize));
@@ -316,7 +317,7 @@
 	}}
 />
 
-<div class="flex flex-col items-center gap-2 sm:gap-4 h-full">
+<div class="flex flex-col items-center gap-2 sm:gap-4">
 	<!-- Compact top bar -->
 	<div class="w-full flex-shrink-0">
 		<TurnIndicator
@@ -331,8 +332,8 @@
 		<span class="text-xs font-bold text-white bg-amber-400 px-2 py-0.5 rounded-full flex-shrink-0">READY!</span>
 	{/if}
 
-	<!-- Board fills remaining height -->
-	<div class="card relative p-2 sm:p-6 overflow-hidden max-w-full flex-1 min-h-0 flex items-center justify-center" data-board-container>
+	<!-- Board sizes to content -->
+	<div class="card relative p-2 sm:p-6 overflow-hidden max-w-full" data-board-container>
 		<div data-board>
 			<Board
 				{grid}

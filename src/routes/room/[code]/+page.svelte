@@ -52,6 +52,13 @@
 	let rejoinLoading = $state(false);
 	let previousHostId = $state<string | null>(null);
 	let startingGame = $state(false);
+	let windowWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 1024);
+
+	$effect(() => {
+		const onResize = () => { windowWidth = window.innerWidth; };
+		window.addEventListener('resize', onResize);
+		return () => window.removeEventListener('resize', onResize);
+	});
 
 	// Detect host transfer and notify
 	$effect(() => {
@@ -232,7 +239,7 @@
 		{/if}
 	</aside>
 
-	<main class="flex flex-1 items-center justify-center p-2 sm:p-4 md:p-8 {roomData?.round?.status === 'active' ? 'h-screen' : ''}">
+	<main class="flex flex-1 items-center justify-center p-2 sm:p-4 md:p-8">
 		{#if loading}
 			<div class="flex flex-col items-center gap-4">
 				<div class="h-10 w-10 border-4 border-border border-t-primary rounded-full animate-spin"></div>
@@ -272,12 +279,14 @@
 				{allCalledNumbers}
 			/>
 			<!-- Mobile leave button (hidden on desktop where sidebar has it) -->
-			<button
-				onclick={() => (showLeaveConfirm = true)}
-				class="md:hidden fixed bottom-2 right-2 z-40 text-[10px] text-white/60 bg-white/10 backdrop-blur-sm px-2 py-1 rounded-lg"
-			>
-				Leave
-			</button>
+			{#if windowWidth < 768}
+				<button
+					onclick={() => (showLeaveConfirm = true)}
+					class="fixed bottom-2 right-2 z-40 btn-curve bg-secondary text-[10px] px-3 py-1"
+				>
+					Leave
+				</button>
+			{/if}
 		{:else if roomData?.room.status === 'round_ended' && !winner && !startingGame}
 			<div class="card flex flex-col items-center gap-5 p-8 max-w-sm w-full animate-pop">
 				<h2 class="text-2xl text-text">Round Ended</h2>
