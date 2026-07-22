@@ -9,7 +9,7 @@
 		<div class="h-3.5 w-3.5 rounded-full {isMyTurn ? 'bg-primary shadow-[0_0_8px_rgba(232,168,56,0.5)]' : 'bg-light-gray'}"></div>
 		<div class="flex flex-col">
 			<span class="text-[10px] sm:text-xs text-text-light uppercase tracking-wider">Turn</span>
-			<span class="text-sm sm:text-base {isMyTurn ? 'text-primary' : 'text-text'}">{isMyTurn ? 'Your turn!' : currentPlayerName}</span>
+			<span class="text-sm sm:text-text-light {isMyTurn ? 'text-primary' : 'text-text'}">{isMyTurn ? 'Your turn!' : currentPlayerName}</span>
 		</div>
 	</div>
 
@@ -24,7 +24,7 @@
 	<div class="h-8 w-px bg-border"></div>
 	<div class="flex flex-col items-center">
 		<span class="text-[10px] sm:text-xs text-text-light uppercase tracking-wider">{isMyTurn ? 'Time' : 'Wait'}</span>
-		<span class="text-sm sm:text-base font-mono {timeLeft <= 10 ? 'text-secondary' : timeLeft <= 20 ? 'text-primary' : 'text-success'}">
+		<span class="text-sm sm:text-text-light font-mono {timeLeft <= 10 ? 'text-secondary' : timeLeft <= 20 ? 'text-primary' : 'text-success'}">
 			{isMyTurn ? `${timeLeft}s` : '—'}
 		</span>
 	</div>

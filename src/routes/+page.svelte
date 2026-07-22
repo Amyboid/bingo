@@ -120,7 +120,7 @@
 
 				<!-- Setup Time -->
 				<div>
-					<p class="text-[10px] font-semibold text-text-light uppercase tracking-widest mb-2" style="text-shadow: 0 1px 0 rgba(255,255,255,0.6);">Setup Time</p>
+					<p class="text-[10px] font-semibold text-text-light uppercase tracking-widest mb-2" style="text-shadow: 0 1px 0 rgba(255,255,255,0.6);">Arrange Board Time</p>
 					<div class="flex gap-2 flex-wrap justify-center">
 						{#each SETUP_TIME_OPTIONS as opt (opt.value)}
 							<button
