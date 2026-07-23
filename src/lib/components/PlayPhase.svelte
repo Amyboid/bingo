@@ -164,20 +164,31 @@
 		return overlays;
 	});
 
-	// Grace period: 5 seconds after turn ends
-	const turnEndedAt = $derived(isMyTurn ? 0 : (turnStartedAt ? new Date(turnStartedAt).getTime() + 30_000 : 0));
-	const graceTimeLeft = $derived(Math.max(0, 5 - Math.floor((Date.now() - turnEndedAt) / 1000)));
-	const inGracePeriod = $derived(!isMyTurn && graceTimeLeft > 0);
+	// Grace period: 10 seconds after turn ends (for Bingo calling)
+	// Starts immediately when it's not your turn, stops after countdown
+	let graceCountdown = $state(0);
+	let graceExpired = $state(false);
+	const inGracePeriod = $derived(!isMyTurn && graceCountdown > 0);
 
-	// Button disabled only when not in valid window (turn or grace period)
-	// Points check is server-side — player gets error toast if they don't have enough
-	const bingoDisabled = $derived(!isMyTurn && !inGracePeriod);
+	$effect(() => {
+		if (isMyTurn) {
+			graceCountdown = 0;
+			graceExpired = false;
+		} else if (!graceExpired && graceCountdown === 0) {
+			graceCountdown = 10;
+			graceExpired = false;
+		}
+	});
 
-	// Reactive timer for grace period countdown
 	let graceInterval = $state<ReturnType<typeof setInterval> | null>(null);
 	$effect(() => {
 		if (inGracePeriod && !graceInterval) {
-			graceInterval = setInterval(() => {}, 1000);
+			graceInterval = setInterval(() => {
+				if (graceCountdown > 0) {
+					graceCountdown--;
+					if (graceCountdown === 0) graceExpired = true;
+				}
+			}, 1000);
 		} else if (!inGracePeriod && graceInterval) {
 			clearInterval(graceInterval);
 			graceInterval = null;
@@ -339,7 +350,7 @@
 			{lastCalledNumber}
 			{isMyTurn}
 			timeLeft={turnTimeLeft}
-			{graceTimeLeft}
+			{graceCountdown}
 		/>
 	</div>
 
@@ -406,8 +417,7 @@
 	<div class="flex-shrink-0 w-full flex justify-center pb-2 sm:pb-0">
 		<button
 			onclick={handleBingo}
-			disabled={bingoDisabled}
-			class="btn btn-coral btn-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
+			class="btn btn-coral btn-lg"
 		>
 			BINGO!
 		</button>

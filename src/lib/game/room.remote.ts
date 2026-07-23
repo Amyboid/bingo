@@ -4,7 +4,39 @@ import * as v from 'valibot';
 import { db } from '$lib/server/db';
 import { rooms, players, rounds, playerBoards } from '$lib/server/db/schema';
 import { eq, and, or, desc, lt, count } from 'drizzle-orm';
-import { generateRoomCode, generateWinWord } from '$lib/server/game/utils';
+import { generateRoomCode, generateWinWord, autoAdvanceTurnIfNeeded } from '$lib/server/game/utils';
+
+async function fetchRoomState(roomCode: string) {
+	const [room] = await db.select().from(rooms).where(eq(rooms.code, roomCode));
+	if (!room) return null;
+
+	const roomPlayers = await db
+		.select()
+		.from(players)
+		.where(eq(players.roomId, room.id))
+		.orderBy(players.joinOrder);
+
+	const [latestRound] = await db
+		.select()
+		.from(rounds)
+		.where(eq(rounds.roomId, room.id))
+		.orderBy(desc(rounds.createdAt))
+		.limit(1);
+
+	const allBoards = latestRound
+		? await db
+				.select()
+				.from(playerBoards)
+				.where(eq(playerBoards.roundId, latestRound.id))
+		: [];
+
+	return {
+		room,
+		players: roomPlayers,
+		round: latestRound ?? null,
+		boards: allBoards
+	};
+}
 
 async function runCleanup() {
 	const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -39,32 +71,10 @@ export const getRoomState = query(v.string(), async (roomCode) => {
 	const [room] = await db.select().from(rooms).where(eq(rooms.code, roomCode));
 	if (!room) error(404, 'Room not found');
 
-	const roomPlayers = await db
-		.select()
-		.from(players)
-		.where(eq(players.roomId, room.id))
-		.orderBy(players.joinOrder);
+	// Auto-advance expired turns
+	await autoAdvanceTurnIfNeeded(room.id);
 
-	const [latestRound] = await db
-		.select()
-		.from(rounds)
-		.where(eq(rounds.roomId, room.id))
-		.orderBy(desc(rounds.createdAt))
-		.limit(1);
-
-	const allBoards = latestRound
-		? await db
-				.select()
-				.from(playerBoards)
-				.where(eq(playerBoards.roundId, latestRound.id))
-		: [];
-
-	return {
-		room,
-		players: roomPlayers,
-		round: latestRound ?? null,
-		boards: allBoards
-	};
+	return fetchRoomState(roomCode);
 });
 
 export const createRoom = command(
@@ -92,6 +102,9 @@ export const createRoom = command(
 
 		// Background cleanup of stale rooms
 		runCleanup().catch(() => {});
+
+		// Single-flight: refresh query for all connected clients
+		void getRoomState(code).refresh();
 
 		return { code, playerId: player.id };
 	}
@@ -132,6 +145,9 @@ export const joinRoom = command(
 
 		// Background cleanup of stale rooms
 		runCleanup().catch(() => {});
+
+		// Single-flight: refresh query for all connected clients
+		void getRoomState(roomCode).refresh();
 
 		return { code: roomCode, playerId: player.id };
 	}
@@ -207,6 +223,11 @@ export const leaveRoom = command(
 				.update(rooms)
 				.set({ status: 'waiting' })
 				.where(eq(rooms.id, roomId));
+		}
+
+		// Single-flight: refresh query for all connected clients
+		if (room.code) {
+			void getRoomState(room.code).refresh();
 		}
 
 		return { left: true, roomDeleted: false };
@@ -335,6 +356,9 @@ export const backToLobby = command(
 			.update(rooms)
 			.set({ status: 'waiting' })
 			.where(eq(rooms.id, roomId));
+
+		// Single-flight: refresh query for all connected clients
+		void getRoomState(room.code).refresh();
 
 		return { success: true };
 	}

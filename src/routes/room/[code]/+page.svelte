@@ -20,10 +20,65 @@
 			: null
 	);
 
+	let roomData = $state<RoomState | null>(null);
+	let loading = $state(true);
+	let showLeaveConfirm = $state(false);
+	let showRejoinForm = $state(false);
+	let rejoinName = $state('');
+	let rejoinLoading = $state(false);
+	let previousHostId = $state<string | null>(null);
+	let startingGame = $state(false);
+	let showRules = $state(false);
+	let windowWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 1024);
+
+	async function fetchState() {
+		try {
+			const q = getRoomState(roomCode);
+			await q.refresh();
+			const data = q.current;
+			if (data) {
+				roomData = data;
+				loading = false;
+
+				// Check if player exists in the room
+				if (playerId && !roomData.players.find((p) => p.id === playerId) && roomData.room.status !== 'round_ended') {
+					showRejoinForm = true;
+				}
+
+				// Auto-confirm if setup deadline passed
+				if (roomData?.round?.status === 'setup' && roomData.round.setupDeadline) {
+					const deadline = new Date(roomData.round.setupDeadline).getTime();
+					if (Date.now() >= deadline) {
+						try {
+							await checkAutoConfirm({ roomId: roomData.room.id });
+						} catch {
+							// Silently ignore
+						}
+					}
+				}
+			}
+		} catch (e) {
+			console.error('Failed to fetch room state:', e);
+			loading = false;
+		}
+	}
+
+	// Polling with refresh — 200ms interval
+	$effect(() => {
+		const code = roomCode;
+		loading = true;
+		fetchState();
+
+		const interval = setInterval(() => {
+			fetchState();
+		}, 200);
+
+		return () => clearInterval(interval);
+	});
+
 	// Redirect home if no playerId and room is not in a rejoinable state
 	$effect(() => {
 		if (!playerId && !loading && roomData) {
-			// Allow rejoin if room is in waiting status
 			if (roomData.room.status === 'waiting') {
 				showRejoinForm = true;
 			} else {
@@ -44,17 +99,6 @@
 		window.addEventListener('beforeunload', handleBeforeUnload);
 		return () => window.removeEventListener('beforeunload', handleBeforeUnload);
 	});
-
-	let roomData = $state<RoomState | null>(null);
-	let loading = $state(true);
-	let showLeaveConfirm = $state(false);
-	let showRejoinForm = $state(false);
-	let rejoinName = $state('');
-	let rejoinLoading = $state(false);
-	let previousHostId = $state<string | null>(null);
-	let startingGame = $state(false);
-	let showRules = $state(false);
-	let windowWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 1024);
 
 	$effect(() => {
 		const onResize = () => { windowWidth = window.innerWidth; };
@@ -109,49 +153,21 @@
 		}));
 	});
 
-	async function fetchState() {
+	function fallbackCopy(text: string) {
+		const textarea = document.createElement('textarea');
+		textarea.value = text;
+		textarea.style.position = 'fixed';
+		textarea.style.opacity = '0';
+		document.body.appendChild(textarea);
+		textarea.select();
 		try {
-			const q = getRoomState(roomCode);
-			await q.refresh();
-			const data = q.current;
-			if (data) {
-				roomData = data;
-				loading = false;
-
-				// Check if player exists in the room
-				if (playerId && !roomData.players.find((p) => p.id === playerId) && roomData.room.status !== 'round_ended') {
-					showRejoinForm = true;
-				}
-
-				// Auto-confirm if setup deadline passed
-				if (roomData?.round?.status === 'setup' && roomData.round.setupDeadline) {
-					const deadline = new Date(roomData.round.setupDeadline).getTime();
-					if (Date.now() >= deadline) {
-						try {
-							await checkAutoConfirm({ roomId: roomData.room.id });
-						} catch {
-							// Silently ignore — round may have already started
-						}
-					}
-				}
-			}
-		} catch (e) {
-			console.error('Failed to fetch room state:', e);
+			document.execCommand('copy');
+			showToast('Room code copied!', 'success');
+		} catch {
+			showToast('Failed to copy', 'error');
 		}
+		document.body.removeChild(textarea);
 	}
-
-	// Polling effect with cleanup
-	$effect(() => {
-		const code = roomCode;
-		loading = true;
-		fetchState();
-
-		const interval = setInterval(() => {
-			fetchState();
-		}, 500);
-
-		return () => clearInterval(interval);
-	});
 
 	async function handleStartGame() {
 		if (!roomData) return;
@@ -213,11 +229,15 @@
 			<h1 class="text-lg text-white" style="text-shadow: 0 2px 0 rgba(0,0,0,0.1);">Bingo</h1>
 			<button
 				onclick={() => {
-					navigator.clipboard?.writeText(roomCode).then(() => {
-						showToast('Room code copied!', 'success');
-					}).catch(() => {
-						showToast('Failed to copy', 'error');
-					});
+					if (navigator.clipboard) {
+						navigator.clipboard.writeText(roomCode).then(() => {
+							showToast('Room code copied!', 'success');
+						}).catch(() => {
+							fallbackCopy(roomCode);
+						});
+					} else {
+						fallbackCopy(roomCode);
+					}
 				}}
 				class="btn-curve bg-gray text-xs px-3 py-1"
 				title="Click to copy"

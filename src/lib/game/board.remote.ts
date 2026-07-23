@@ -6,6 +6,15 @@ import { rooms, players, rounds, playerBoards } from '$lib/server/db/schema';
 import { eq, and, count } from 'drizzle-orm';
 import { createDefaultGrid, getLineCells } from '$lib/server/game/utils';
 import { markNumberOnAllBoards } from '$lib/server/game/state';
+import { getRoomState } from '$lib/game/room.remote';
+
+// Helper: refresh query for all clients in a room
+async function refreshByRoomId(roomId: string) {
+	const [room] = await db.select().from(rooms).where(eq(rooms.id, roomId)).limit(1);
+	if (room) {
+		void getRoomState(room.code).refresh();
+	}
+}
 
 export const updateGrid = command(
 	v.object({
@@ -81,6 +90,9 @@ export const confirmBoard = command(
 		if (allConfirmed) {
 			await startRound(roomId, round.id);
 		}
+
+		// Broadcast state to room (for WebSocket clients)
+		await refreshByRoomId(roomId);
 	}
 );
 
@@ -139,6 +151,9 @@ export const startGame = command(
 		}
 
 		await db.update(rooms).set({ status: 'in_progress' }).where(eq(rooms.id, roomId));
+
+		// Broadcast state to room (for WebSocket clients)
+		await refreshByRoomId(roomId);
 	}
 );
 
@@ -226,6 +241,9 @@ export const callNumber = command(
 				turnStartedAt: new Date()
 			})
 			.where(eq(rounds.id, round.id));
+
+		// Broadcast state to room (for WebSocket clients)
+		await refreshByRoomId(roomId);
 	}
 );
 
@@ -280,6 +298,9 @@ export const sweepLine = command(
 				points: board.points + pointsAwarded
 			})
 			.where(eq(playerBoards.id, board.id));
+
+		// Broadcast state to room (for WebSocket clients)
+		await refreshByRoomId(roomId);
 	}
 );
 
@@ -299,13 +320,14 @@ export const callBingo = command(
 			.limit(1);
 		if (!round) error(400,'No active round');
 
-		// Allow bingo call on turn OR within 5 seconds after turn ends
+		// Allow bingo call on turn OR within 10 seconds after turn ends
+		// (extra time to account for polling delay)
 		const isMyTurn = round.currentTurnPlayerId === playerId;
 		if (!isMyTurn) {
 			const turnStartedAt = round.turnStartedAt?.getTime() ?? 0;
-			const graceDeadline = turnStartedAt + 5000; // 5s after current player's turn started
+			const graceDeadline = turnStartedAt + 10000; // 10s after current player's turn started
 			if (Date.now() > graceDeadline) {
-				error(400, 'Can only call Bingo on your turn or within 5 seconds after');
+				error(400, 'Can only call Bingo on your turn or within 10 seconds after');
 			}
 		}
 
@@ -330,6 +352,9 @@ export const callBingo = command(
 			.update(rooms)
 			.set({ status: 'round_ended' })
 			.where(eq(rooms.id, roomId));
+
+		// Broadcast state to room (for WebSocket clients)
+		await refreshByRoomId(roomId);
 
 		return { winner: playerId, points: board.points };
 	}
@@ -379,6 +404,9 @@ export const checkAutoConfirm = command(
 					turnStartedAt: new Date()
 				})
 				.where(eq(rounds.id, round.id));
+
+			// Broadcast state to room (for WebSocket clients)
+			await refreshByRoomId(roomId);
 
 			return { started: true };
 		}
@@ -438,6 +466,9 @@ export const autoCallNumber = command(
 				turnStartedAt: new Date()
 			})
 			.where(eq(rounds.id, round.id));
+
+		// Broadcast state to room (for WebSocket clients)
+		await refreshByRoomId(roomId);
 
 		return { autoCalled: true, number: randomNum };
 	}
