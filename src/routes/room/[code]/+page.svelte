@@ -31,6 +31,9 @@
 	let showRules = $state(false);
 	let windowWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 1024);
 
+	let retryCount = 0;
+	const MAX_RETRIES = 3;
+
 	async function fetchState() {
 		try {
 			const q = getRoomState(roomCode);
@@ -39,6 +42,7 @@
 			if (data) {
 				roomData = data;
 				loading = false;
+				retryCount = 0; // Reset on success
 
 				// Check if player exists in the room
 				if (playerId && !roomData.players.find((p) => p.id === playerId) && roomData.room.status !== 'round_ended') {
@@ -59,19 +63,21 @@
 			}
 		} catch (e) {
 			console.error('Failed to fetch room state:', e);
-			loading = false;
+			retryCount++;
+			if (retryCount < MAX_RETRIES) {
+				// Exponential backoff: 1s, 2s, 4s
+				setTimeout(fetchState, Math.pow(2, retryCount) * 1000);
+			}
 		}
 	}
 
-	// Polling with refresh — 200ms interval
+	// Polling with refresh — 1000ms interval
 	$effect(() => {
 		const code = roomCode;
 		loading = true;
 		fetchState();
 
-		const interval = setInterval(() => {
-			fetchState();
-		}, 200);
+		const interval = setInterval(fetchState, 1000);
 
 		return () => clearInterval(interval);
 	});
