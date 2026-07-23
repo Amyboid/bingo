@@ -448,8 +448,6 @@ export const autoCallNumber = command(
 
 		const randomNum = uncalled[Math.floor(Math.random() * uncalled.length)];
 
-		await markNumberOnAllBoards(round.id, randomNum);
-
 		const roomPlayers = await db
 			.select()
 			.from(players)
@@ -458,14 +456,19 @@ export const autoCallNumber = command(
 		const currentIndex = roomPlayers.findIndex((p) => p.id === playerId);
 		const nextPlayer = roomPlayers[(currentIndex + 1) % roomPlayers.length];
 
-		await db
+		// Atomic lock: claim the turn before marking to prevent race with autoAdvanceTurnIfNeeded
+		const result = await db
 			.update(rounds)
 			.set({
 				lastCalledNumber: randomNum,
 				currentTurnPlayerId: nextPlayer.id,
 				turnStartedAt: new Date()
 			})
-			.where(eq(rounds.id, round.id));
+			.where(and(eq(rounds.id, round.id), eq(rounds.currentTurnPlayerId, playerId)));
+
+		if (result.rowCount === 0) error(400, 'Turn already advanced');
+
+		await markNumberOnAllBoards(round.id, randomNum);
 
 		// Broadcast state to room (for WebSocket clients)
 		await refreshByRoomId(roomId);

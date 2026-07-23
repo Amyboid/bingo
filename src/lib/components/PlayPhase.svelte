@@ -79,9 +79,10 @@
 	// 30s turn timer + auto-call
 	$effect(() => {
 		const turnKey = turnTimestamp;
+		const myTurn = isMyTurn;
 		autoCalled = false;
 
-		if (!turnKey) {
+		if (!turnKey || !myTurn) {
 			turnTimeLeft = 0;
 			return;
 		}
