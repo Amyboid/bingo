@@ -59,36 +59,39 @@ export async function autoAdvanceTurnIfNeeded(roomId: string): Promise<boolean> 
 	if (elapsed < TURN_TIMEOUT_MS) return false;
 	console.log(`[auto-advance] ADVANCING TURN for room ${roomId}`);
 
-	// Save current state for optimistic locking
+	// Save current state for locking
 	const currentTurnPlayerId = round.currentTurnPlayerId;
-	const currentTurnStartedAt = round.turnStartedAt;
 	const roundId = round.id;
 
-	// ATOMIC LOCK: Try to update turnStartedAt only if it hasn't changed
-	// This prevents two processes from advancing the same turn
-	const newTimestamp = new Date();
-	await db
+	// ATOMIC LOCK: Try to claim the turn FIRST before doing any work
+	// Uses currentTurnPlayerId in WHERE clause — only 1 process can succeed
+	const roomPlayers = await db
+		.select()
+		.from(players)
+		.where(eq(players.roomId, roomId))
+		.orderBy(players.joinOrder);
+
+	const currentIndex = roomPlayers.findIndex((p) => p.id === currentTurnPlayerId);
+	const nextPlayer = roomPlayers[(currentIndex + 1) % roomPlayers.length];
+
+	const lockResult = await db
 		.update(rounds)
-		.set({ turnStartedAt: newTimestamp })
+		.set({
+			currentTurnPlayerId: nextPlayer.id,
+			turnStartedAt: new Date()
+		})
 		.where(and(
 			eq(rounds.id, roundId),
-			eq(rounds.turnStartedAt, currentTurnStartedAt)
+			eq(rounds.currentTurnPlayerId, currentTurnPlayerId)
 		));
 
-	// Verify lock acquired: re-read and check if OUR timestamp was written
-	const [checkRound] = await db
-		.select()
-		.from(rounds)
-		.where(eq(rounds.id, roundId))
-		.limit(1);
-
-	// If the timestamp doesn't match what we wrote, another process won the race
-	if (checkRound.turnStartedAt.getTime() !== newTimestamp.getTime()) {
+	// If 0 rows affected, another process already advanced → skip
+	if (lockResult.rowCount === 0) {
 		console.log(`[auto-advance] SKIP: turn already advanced by another process`);
 		return false;
 	}
 
-	// Find the current player's board to determine uncalled numbers
+	// Lock acquired — now find uncalled numbers and mark one
 	const [board] = await db
 		.select()
 		.from(playerBoards)
@@ -115,23 +118,10 @@ export async function autoAdvanceTurnIfNeeded(roomId: string): Promise<boolean> 
 	// Mark on all boards
 	await markNumberOnAllBoards(roundId, randomNum);
 
-	// Advance to next player
-	const roomPlayers = await db
-		.select()
-		.from(players)
-		.where(eq(players.roomId, roomId))
-		.orderBy(players.joinOrder);
-
-	const currentIndex = roomPlayers.findIndex((p) => p.id === currentTurnPlayerId);
-	const nextPlayer = roomPlayers[(currentIndex + 1) % roomPlayers.length];
-
+	// Update lastCalledNumber
 	await db
 		.update(rounds)
-		.set({
-			lastCalledNumber: randomNum,
-			currentTurnPlayerId: nextPlayer.id,
-			turnStartedAt: new Date()
-		})
+		.set({ lastCalledNumber: randomNum })
 		.where(eq(rounds.id, roundId));
 
 	console.log(`[auto-advance] Completed: called ${randomNum}, next player ${nextPlayer.id}`);
