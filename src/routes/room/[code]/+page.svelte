@@ -124,6 +124,7 @@
 	const currentPlayer = $derived(roomData?.players.find((p) => p.id === playerId));
 	const isHost = $derived(roomData?.room.hostId === playerId);
 	const myBoard = $derived(roomData?.boards.find((b) => b.playerId === playerId));
+	const currentTurnPlayerName = $derived(roomData?.players.find((p) => p.id === roomData.round?.currentTurnPlayerId)?.displayName ?? 'Unknown');
 
 	const allCalledNumbers = $derived.by(() => {
 		if (!roomData?.round) return [];
@@ -255,7 +256,6 @@
 			<PlayerList
 				players={roomData.players}
 				currentPlayerId={playerId}
-				currentTurnPlayerId={roomData.round?.currentTurnPlayerId ?? null}
 				hostId={roomData.room.hostId}
 			/>
 			<button
@@ -308,7 +308,7 @@
 				currentTurnPlayerId={roomData.round.currentTurnPlayerId!}
 				lastCalledNumber={roomData.round.lastCalledNumber}
 				turnStartedAt={roomData.round.turnStartedAt}
-				playerName={currentPlayer?.displayName ?? 'Unknown'}
+				playerName={currentTurnPlayerName}
 				{allCalledNumbers}
 			/>
 			<!-- Mobile leave button (hidden on desktop where sidebar has it) -->
