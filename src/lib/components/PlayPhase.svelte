@@ -176,7 +176,7 @@
 			graceCountdown = 0;
 			graceExpired = false;
 		} else if (!graceExpired && graceCountdown === 0) {
-			graceCountdown = 10;
+			graceCountdown = 5;
 			graceExpired = false;
 		}
 	});

@@ -320,14 +320,14 @@ export const callBingo = command(
 			.limit(1);
 		if (!round) error(400,'No active round');
 
-		// Allow bingo call on turn OR within 10 seconds after turn ends
+		// Allow bingo call on turn OR within 5 seconds after turn ends
 		// (extra time to account for polling delay)
 		const isMyTurn = round.currentTurnPlayerId === playerId;
 		if (!isMyTurn) {
 			const turnStartedAt = round.turnStartedAt?.getTime() ?? 0;
-			const graceDeadline = turnStartedAt + 10000; // 10s after current player's turn started
+			const graceDeadline = turnStartedAt + 5000; // 5s after current player's turn started
 			if (Date.now() > graceDeadline) {
-				error(400, 'Can only call Bingo on your turn or within 10 seconds after');
+				error(400, 'Can only call Bingo on your turn or within 5 seconds after');
 			}
 		}
 

@@ -55,7 +55,7 @@
 				<h3 class="font-semibold text-text text-xs uppercase tracking-wider mb-1">Calling BINGO</h3>
 				<ul class="space-y-1 list-disc list-inside">
 					<li>BINGO button is always available</li>
-					<li>Call during your turn or up to 10 seconds after</li>
+					<li>Call during your turn or up to 5 seconds after</li>
 					<li>Need at least as many points as grid size (e.g., 5 for 5&times;5)</li>
 					<li>Calling BINGO ends the round</li>
 				</ul>
